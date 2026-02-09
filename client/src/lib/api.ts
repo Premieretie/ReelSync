@@ -44,5 +44,6 @@ export const resetRPSGame = (sessionId: number) => api.post(`/game/rps/${session
 // Admin
 export const seedTMDB = (pages: number = 1, type: 'popular' | 'top_rated' = 'popular') => 
     api.post('/admin/seed-tmdb', { pages, type });
+export const clearMovies = () => api.delete('/admin/movies');
 
 export default api;

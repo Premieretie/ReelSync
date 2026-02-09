@@ -187,6 +187,26 @@ async function initDb() {
             // console.log("Note: youtube_key column might already exist", e.message);
         }
     }
+
+    // Add extended metadata columns
+    const newColumns = [
+        { name: 'overview', type: 'TEXT' },
+        { name: 'origin_country', type: 'VARCHAR(100)' },
+        { name: 'original_language', type: 'VARCHAR(10)' },
+        { name: 'runtime', type: 'INT' },
+        { name: 'cast', type: 'JSON' }
+    ];
+
+    for (const col of newColumns) {
+        try {
+            await connection.query(`ALTER TABLE movies ADD COLUMN ${col.name} ${col.type}`);
+            console.log(`Added column ${col.name} to movies table`);
+        } catch (e) {
+            if (e.code !== 'ER_DUP_FIELDNAME') {
+                // console.log(`Note: ${col.name} column might already exist`);
+            }
+        }
+    }
     
     // Seed Sample Data if empty
     const [rows] = await connection.query('SELECT COUNT(*) as count FROM movies');

@@ -182,8 +182,31 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, sessionId, userId, 
 
       <div className="p-4">
         <h3 className="font-bold text-lg leading-tight mb-1 truncate">{movie.title}</h3>
-        <p className="text-xs text-slate-400">{movie.release_date?.split('-')[0]} • {Number(movie.vote_average || 0).toFixed(1)}/10</p>
+        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400 mb-2">
+            <span>{movie.release_date?.split('-')[0]}</span>
+            <span>•</span>
+            <span>{Number(movie.vote_average || 0).toFixed(1)}/10</span>
+            {movie.runtime > 0 && (
+                <>
+                    <span>•</span>
+                    <span>{Math.floor(movie.runtime / 60)}h {movie.runtime % 60}m</span>
+                </>
+            )}
+            {(movie.original_language || movie.origin_country) && (
+                <>
+                   <span>•</span>
+                   <span className="uppercase">{movie.original_language || movie.origin_country}</span>
+                </>
+            )}
+        </div>
+        
         <p className="text-sm text-slate-300 mt-2 line-clamp-3">{movie.overview}</p>
+        
+        {movie.cast && movie.cast.length > 0 && (
+            <p className="text-xs text-slate-500 mt-2 truncate">
+                <span className="text-slate-400 font-semibold">Stars:</span> {movie.cast.join(', ')}
+            </p>
+        )}
       </div>
     </div>
   );

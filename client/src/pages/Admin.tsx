@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { seedTMDB } from '@/lib/api';
+import { seedTMDB, clearMovies } from '@/lib/api';
 import { Button } from '@/components/Button';
-import { ArrowLeft, Database, Download, CheckCircle, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Database, Download, CheckCircle, AlertCircle, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export const Admin = () => {
@@ -21,6 +21,24 @@ export const Admin = () => {
         } catch (e: any) {
             console.error(e);
             setError(e.response?.data?.error || 'Failed to seed database');
+            setStatus(null);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleClear = async () => {
+        if (!confirm("Are you sure? This will delete ALL movies from the database.")) return;
+        setLoading(true);
+        setStatus('Clearing database...');
+        setError(null);
+
+        try {
+            await clearMovies();
+            setStatus('Success! All movies deleted.');
+        } catch (e: any) {
+            console.error(e);
+            setError(e.response?.data?.error || 'Failed to clear database');
             setStatus(null);
         } finally {
             setLoading(false);
@@ -70,6 +88,17 @@ export const Admin = () => {
                             className="flex-1 bg-green-600 hover:bg-green-700"
                         >
                             <Download size={18} className="mr-2" /> Import Top Rated
+                        </Button>
+                    </div>
+
+                    <div className="pt-6 border-t border-slate-800">
+                        <h3 className="text-lg font-bold text-red-400 mb-2">Danger Zone</h3>
+                         <Button 
+                            onClick={handleClear} 
+                            disabled={loading}
+                            className="w-full bg-red-900/50 hover:bg-red-900 text-red-200 border border-red-800"
+                        >
+                            <Trash2 size={18} className="mr-2" /> Clear All Movies
                         </Button>
                     </div>
 

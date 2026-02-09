@@ -141,50 +141,90 @@ app.post('/api/admin/seed-tmdb', async (req, res) => {
             
             for (const item of results) {
                 // Check if exists
-                const [existing] = await db.query('SELECT id FROM movies WHERE movie_title = ?', [item.title]);
-                if (existing.length > 0) continue;
+                const [existing] = await db.query('SELECT * FROM movies WHERE movie_title = ?', [item.title]);
+                
+                // If exists and has overview, skip (already complete)
+                if (existing.length > 0 && existing[0].overview) {
+                    continue;
+                }
 
-                // Fetch details for Director and Videos
+                // Fetch details for Director, Videos, and Metadata
                 const detailsRes = await axios.get(`${TMDB_BASE_URL}/movie/${item.id}?append_to_response=credits,videos`, getTMDBHeaders());
                 const details = detailsRes.data;
 
                 const director = details.credits.crew.find(c => c.job === 'Director')?.name || 'Unknown';
                 const trailer = details.videos.results.find(v => v.type === 'Trailer' && v.site === 'YouTube')?.key || null;
                 
+                // New Metadata
+                const overview = details.overview || '';
+                const runtime = details.runtime || 0;
+                const original_language = details.original_language || 'en';
+                const origin_country = details.production_countries?.[0]?.iso_3166_1 || (details.origin_country?.[0]) || 'Unknown';
+                const cast = details.credits.cast?.slice(0, 5).map(c => c.name) || [];
+
                 const genre = mapGenreIdToName(item.genre_ids[0]);
                 const sub_genre = item.genre_ids[1] ? mapGenreIdToName(item.genre_ids[1]) : 'General';
                 const tone = inferTone(genre, item.vote_average);
                 const story_type = inferStoryType(genre, item.overview || '');
                 const year = item.release_date ? parseInt(item.release_date.split('-')[0]) : 0;
 
-                await db.query(
-                    `INSERT INTO movies 
-                    (movie_title, year, genre, sub_genre, story_type, tone, main_theme, setting_location, director, rating, poster_path, youtube_key) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                    [
-                        item.title,
-                        year,
-                        genre,
-                        sub_genre,
-                        story_type,
-                        tone,
-                        'Entertainment', // Default main_theme
-                        'Unknown',       // Default setting
-                        director,
-                        item.vote_average,
-                        item.poster_path,
-                        trailer
-                    ]
-                );
-                moviesAdded++;
+                if (existing.length > 0) {
+                    // Update existing record with new metadata
+                    await db.query(
+                        `UPDATE movies SET 
+                        overview = ?, runtime = ?, original_language = ?, origin_country = ?, cast = ?, youtube_key = COALESCE(youtube_key, ?)
+                        WHERE id = ?`,
+                        [overview, runtime, original_language, origin_country, JSON.stringify(cast), trailer, existing[0].id]
+                    );
+                    // console.log(`Updated metadata for: ${item.title}`);
+                } else {
+                    // Insert new record
+                    await db.query(
+                        `INSERT INTO movies 
+                        (movie_title, year, genre, sub_genre, story_type, tone, main_theme, setting_location, director, rating, poster_path, youtube_key, overview, runtime, original_language, origin_country, cast) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                        [
+                            item.title,
+                            year,
+                            genre,
+                            sub_genre,
+                            story_type,
+                            tone,
+                            'Entertainment', // Default main_theme
+                            'Unknown',       // Default setting
+                            director,
+                            item.vote_average,
+                            item.poster_path,
+                            trailer,
+                            overview,
+                            runtime,
+                            original_language,
+                            origin_country,
+                            JSON.stringify(cast)
+                        ]
+                    );
+                    moviesAdded++;
+                }
             }
         }
 
-        res.json({ success: true, message: `Successfully added ${moviesAdded} movies from TMDB` });
+        res.json({ success: true, message: `Processed ${pages} pages. Added ${moviesAdded} new movies. Existing movies were updated with new details.` });
 
     } catch (err) {
         console.error("TMDB Import Error:", err.message);
         res.status(500).json({ error: "Failed to import from TMDB", details: err.message });
+    }
+});
+
+// Admin: Clear Movies
+app.delete('/api/admin/movies', async (req, res) => {
+    try {
+        await db.query('DELETE FROM movies');
+        // Reset Auto Increment
+        await db.query('ALTER TABLE movies AUTO_INCREMENT = 1');
+        res.json({ success: true, message: "Movies table cleared" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -507,10 +547,15 @@ app.post('/api/recommendations', async (req, res) => {
     const results = movies.map(m => ({
         id: m.id,
         title: m.movie_title,
-        overview: `${m.genre} - ${m.story_type}. ${m.tone} tone, featuring ${m.main_theme}. Set in ${m.setting_location}.`,
+        overview: m.overview || `${m.genre} - ${m.story_type}. ${m.tone} tone, featuring ${m.main_theme}. Set in ${m.setting_location}.`,
         release_date: `${m.year}-01-01`,
         vote_average: Number(m.rating),
-        poster_path: m.poster_path // might be null
+        poster_path: m.poster_path,
+        // New metadata
+        runtime: m.runtime,
+        original_language: m.original_language,
+        origin_country: m.origin_country,
+        cast: (typeof m.cast === 'string' ? JSON.parse(m.cast) : m.cast) || []
     }));
 
     const profile = generateNightProfile(avg);
