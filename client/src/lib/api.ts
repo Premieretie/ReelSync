@@ -1,7 +1,10 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: '/api' // Proxy set in vite.config.ts
+  baseURL: import.meta.env.PROD ? 'https://borty-ernesto-fairily.ngrok-free.dev/api' : '/api',
+  headers: {
+    'ngrok-skip-browser-warning': 'true'
+  }
 });
 
 export const createSession = () => api.post('/session');
