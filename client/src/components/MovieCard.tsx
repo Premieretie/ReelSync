@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Play, Plus, ThumbsUp, ThumbsDown, Check, Heart } from 'lucide-react';
+import { Play, Plus, ThumbsUp, ThumbsDown, Check, Heart, Scale, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { addToSharedList, voteMovie, addToHistory, addToFavorites } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -12,14 +12,18 @@ interface MovieCardProps {
   userId?: number;
   mode: 'recommendation' | 'shared' | 'history';
   onAction?: () => void;
+  voteCounts?: { likes: number; dislikes: number };
 }
 
-export const MovieCard: React.FC<MovieCardProps> = ({ movie, sessionId, userId, mode, onAction }) => {
+export const MovieCard: React.FC<MovieCardProps> = ({ movie, sessionId, userId, mode, onAction, voteCounts }) => {
   const [added, setAdded] = useState(false);
   const [favorited, setFavorited] = useState(false);
   const [userVote, setUserVote] = useState<'like' | 'dislike' | null>(null);
   const { user } = useAuth();
   const { playMovie } = useVideoPlayer();
+
+  const isSplitDecision = mode === 'shared' && voteCounts && voteCounts.likes > 0 && voteCounts.dislikes > 0;
+  const isMatch = mode === 'shared' && voteCounts && voteCounts.likes >= 2;
 
   const handlePlayTrailer = () => {
     playMovie(movie.id, movie.title);
@@ -68,7 +72,11 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, sessionId, userId, 
   }
 
   return (
-    <div className="relative group overflow-hidden rounded-xl bg-slate-900 border border-slate-800 shadow-lg transition-transform hover:scale-[1.02]">
+    <div className={cn(
+        "relative group overflow-hidden rounded-xl bg-slate-900 border shadow-lg transition-transform hover:scale-[1.02]",
+        isMatch ? "border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.3)]" : "border-slate-800",
+        isSplitDecision ? "border-orange-500 shadow-[0_0_20px_rgba(249,115,22,0.3)]" : ""
+    )}>
       <div className="relative aspect-[2/3] w-full overflow-hidden">
         {movie.poster_path ? (
           <img
@@ -80,6 +88,18 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, sessionId, userId, 
           <div className="flex h-full items-center justify-center bg-slate-800 text-slate-500">No Image</div>
         )}
         
+        {/* Overlays for Split Decision / Match */}
+        {isSplitDecision && (
+            <div className="absolute top-0 left-0 w-full bg-orange-600 text-white text-xs font-bold py-1 flex items-center justify-center gap-1 z-20">
+                <Scale size={14} /> SPLIT DECISION
+            </div>
+        )}
+        {isMatch && (
+            <div className="absolute top-0 left-0 w-full bg-green-600 text-white text-xs font-bold py-1 flex items-center justify-center gap-1 z-20">
+                <Sparkles size={14} /> IT'S A MATCH!
+            </div>
+        )}
+
         {/* Favorite Button (Top Right) */}
         {user && (
             <button 

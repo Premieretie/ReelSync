@@ -3,11 +3,16 @@ const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const axios = require('axios');
 const { authenticateToken, JWT_SECRET } = require('./middleware');
 const db = require('./database_mysql');
 
 const app = express();
 const PORT = process.env.PORT || 3002;
+
+// --- TMDB Config ---
+const TMDB_READ_TOKEN = process.env.TMDB_READ_TOKEN;
+const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 
 app.use(cors({
   origin: ['http://localhost:5173', 'https://premieretie.github.io', 'https://borty-ernesto-fairily.ngrok-free.dev'],
@@ -23,6 +28,10 @@ const generateSessionCode = () => {
 
 const getRandomModifiers = () => {
   const modifiers = [
+    "Popcorn Mandatory ", "Blanket Fort Mode ", "No Phones Allowed ", 
+    "Critique Accents ", "Guess the Twist ", "Rate Every Outfit ",
+    "Drink Every Time Someone Says 'No' ", "Lights Off ", "Surround Sound Max ",
+    "Silent Snacks Only ", "Subtitles On ", "Predict the Ending ",
     "Popcorn Mandatory 🍿", "Blanket Fort Mode ⛺", "No Phones Allowed 📵", 
     "Critique Accents 🗣️", "Guess the Twist 😱", "Rate Every Outfit 👗",
     "Drink Every Time Someone Says 'No' 🥤", "Lights Off 🌑", "Surround Sound Max 🔊",
@@ -73,7 +82,111 @@ const generateNightProfile = (avg) => {
   return `A ${adjectives.join(", ")} and ${last} Vibe`;
 };
 
+// --- TMDB Helper Functions ---
+const getTMDBHeaders = () => ({
+    headers: {
+        Authorization: `Bearer ${TMDB_READ_TOKEN}`,
+        accept: 'application/json'
+    }
+});
+
+const mapGenreIdToName = (id) => {
+    const genres = {
+        28: 'Action', 12: 'Adventure', 16: 'Animation', 35: 'Comedy', 80: 'Crime',
+        99: 'Documentary', 18: 'Drama', 10751: 'Family', 14: 'Fantasy', 36: 'History',
+        27: 'Horror', 10402: 'Music', 9648: 'Mystery', 10749: 'Romance', 878: 'Sci-Fi',
+        10770: 'TV Movie', 53: 'Thriller', 10752: 'War', 37: 'Western'
+    };
+    return genres[id] || 'General';
+};
+
+const inferTone = (genre, voteAverage) => {
+    if (genre === 'Horror') return 'Scary';
+    if (genre === 'Comedy') return 'Silly';
+    if (genre === 'Drama') return 'Emotional';
+    if (genre === 'Thriller') return 'Suspenseful';
+    if (genre === 'Action') return 'Exciting';
+    if (genre === 'Sci-Fi') return 'Serious';
+    if (genre === 'Romance') return 'Light';
+    return voteAverage > 7.5 ? 'Serious' : 'Light';
+};
+
+const inferStoryType = (genre, overview) => {
+    const lower = overview.toLowerCase();
+    if (lower.includes('time travel') || lower.includes('mind')) return 'Mind-bending';
+    if (genre === 'Sci-Fi') return 'Hero Journey';
+    if (genre === 'Fantasy') return 'Quest';
+    if (genre === 'Mystery') return 'Whodunit';
+    return 'Classic';
+};
+
 // --- Routes ---
+
+// Admin: Seed from TMDB
+app.post('/api/admin/seed-tmdb', async (req, res) => {
+    const { pages = 1, type = 'popular' } = req.body;
+    
+    if (!TMDB_READ_TOKEN) {
+        return res.status(500).json({ error: "TMDB_READ_TOKEN not configured in server" });
+    }
+
+    try {
+        let moviesAdded = 0;
+        
+        for (let p = 1; p <= pages; p++) {
+            const endpoint = type === 'top_rated' ? '/movie/top_rated' : '/movie/popular';
+            const response = await axios.get(`${TMDB_BASE_URL}${endpoint}?language=en-US&page=${p}`, getTMDBHeaders());
+            
+            const results = response.data.results;
+            
+            for (const item of results) {
+                // Check if exists
+                const [existing] = await db.query('SELECT id FROM movies WHERE movie_title = ?', [item.title]);
+                if (existing.length > 0) continue;
+
+                // Fetch details for Director and Videos
+                const detailsRes = await axios.get(`${TMDB_BASE_URL}/movie/${item.id}?append_to_response=credits,videos`, getTMDBHeaders());
+                const details = detailsRes.data;
+
+                const director = details.credits.crew.find(c => c.job === 'Director')?.name || 'Unknown';
+                const trailer = details.videos.results.find(v => v.type === 'Trailer' && v.site === 'YouTube')?.key || null;
+                
+                const genre = mapGenreIdToName(item.genre_ids[0]);
+                const sub_genre = item.genre_ids[1] ? mapGenreIdToName(item.genre_ids[1]) : 'General';
+                const tone = inferTone(genre, item.vote_average);
+                const story_type = inferStoryType(genre, item.overview || '');
+                const year = item.release_date ? parseInt(item.release_date.split('-')[0]) : 0;
+
+                await db.query(
+                    `INSERT INTO movies 
+                    (movie_title, year, genre, sub_genre, story_type, tone, main_theme, setting_location, director, rating, poster_path, youtube_key) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    [
+                        item.title,
+                        year,
+                        genre,
+                        sub_genre,
+                        story_type,
+                        tone,
+                        'Entertainment', // Default main_theme
+                        'Unknown',       // Default setting
+                        director,
+                        item.vote_average,
+                        item.poster_path,
+                        trailer
+                    ]
+                );
+                moviesAdded++;
+            }
+        }
+
+        res.json({ success: true, message: `Successfully added ${moviesAdded} movies from TMDB` });
+
+    } catch (err) {
+        console.error("TMDB Import Error:", err.message);
+        res.status(500).json({ error: "Failed to import from TMDB", details: err.message });
+    }
+});
 
 // 0. Auth Routes
 app.post('/api/auth/register', async (req, res) => {
@@ -448,7 +561,16 @@ app.post('/api/list/add', async (req, res) => {
 
 app.get('/api/session/:id/list', async (req, res) => {
   try {
-    const [rows] = await db.query(`SELECT * FROM shared_list WHERE session_id = ?`, [req.params.id]);
+    const [rows] = await db.query(`
+        SELECT sl.*, 
+        COALESCE(SUM(CASE WHEN v.vote_value = 1 THEN 1 ELSE 0 END), 0) as likes,
+        COALESCE(SUM(CASE WHEN v.vote_value = -1 THEN 1 ELSE 0 END), 0) as dislikes
+        FROM shared_list sl
+        LEFT JOIN votes v ON sl.session_id = v.session_id AND sl.movie_id = v.movie_id
+        WHERE sl.session_id = ?
+        GROUP BY sl.id
+    `, [req.params.id]);
+    
     res.json(rows.map(r => ({
         ...r, 
         movie_data: (typeof r.movie_data === 'string') ? JSON.parse(r.movie_data) : r.movie_data
@@ -461,13 +583,83 @@ app.get('/api/session/:id/list', async (req, res) => {
 app.post('/api/vote', async (req, res) => {
   const { session_id, movie_id, user_id, vote_value } = req.body;
   try {
-    await db.query(`INSERT INTO votes (session_id, movie_id, user_id, vote_value) VALUES (?, ?, ?, ?)`,
-      [session_id, movie_id, user_id, vote_value]
-    );
-    res.json({ success: true });
+    // Check if user already voted
+    const [existing] = await db.query(`SELECT id FROM votes WHERE session_id = ? AND movie_id = ? AND user_id = ?`, [session_id, movie_id, user_id]);
+    
+    if (existing.length > 0) {
+        await db.query(`UPDATE votes SET vote_value = ? WHERE id = ?`, [vote_value, existing[0].id]);
+    } else {
+        await db.query(`INSERT INTO votes (session_id, movie_id, user_id, vote_value) VALUES (?, ?, ?, ?)`,
+          [session_id, movie_id, user_id, vote_value]
+        );
+    }
+
+    // Check for double dislikes
+    const [counts] = await db.query(`
+        SELECT 
+            COALESCE(SUM(CASE WHEN vote_value = -1 THEN 1 ELSE 0 END), 0) as dislikes
+        FROM votes 
+        WHERE session_id = ? AND movie_id = ?
+    `, [session_id, movie_id]);
+
+    if (counts[0].dislikes >= 2) {
+        await db.query(`DELETE FROM shared_list WHERE session_id = ? AND movie_id = ?`, [session_id, movie_id]);
+        await db.query(`DELETE FROM votes WHERE session_id = ? AND movie_id = ?`, [session_id, movie_id]); // Cleanup votes
+        return res.json({ success: true, removed: true });
+    }
+
+    res.json({ success: true, removed: false });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// 6. Rock Paper Scissors Mini-game
+const rpsGames = {}; // In-memory store for simplicity (or use DB for persistence)
+
+app.post('/api/game/rps/move', (req, res) => {
+    const { session_id, user_id, move } = req.body; // move: 'rock', 'paper', 'scissors'
+    
+    if (!rpsGames[session_id]) {
+        rpsGames[session_id] = { moves: {}, result: null };
+    }
+
+    rpsGames[session_id].moves[user_id] = move;
+
+    // Check if 2 players have moved
+    const playerIds = Object.keys(rpsGames[session_id].moves);
+    if (playerIds.length === 2) {
+        const p1 = playerIds[0];
+        const p2 = playerIds[1];
+        const m1 = rpsGames[session_id].moves[p1];
+        const m2 = rpsGames[session_id].moves[p2];
+
+        let winner = null;
+        if (m1 === m2) winner = 'draw';
+        else if (
+            (m1 === 'rock' && m2 === 'scissors') ||
+            (m1 === 'paper' && m2 === 'rock') ||
+            (m1 === 'scissors' && m2 === 'paper')
+        ) {
+            winner = p1;
+        } else {
+            winner = p2;
+        }
+
+        rpsGames[session_id].result = { winner, moves: rpsGames[session_id].moves };
+    }
+
+    res.json({ success: true });
+});
+
+app.get('/api/game/rps/:session_id', (req, res) => {
+    const game = rpsGames[req.params.session_id];
+    res.json(game || { moves: {}, result: null });
+});
+
+app.post('/api/game/rps/:session_id/reset', (req, res) => {
+    delete rpsGames[req.params.session_id];
+    res.json({ success: true });
 });
 
 // 5. History

@@ -35,4 +35,14 @@ export const getAccountHistory = () => api.get('/account/history');
 export const verifyEmail = (token: string) => api.post('/auth/verify', { token });
 export const subscribe = (username: string, paymentToken: string) => api.post('/auth/subscribe', { username, payment_token: paymentToken });
 
+// Game
+export const submitRPSMove = (sessionId: number, userId: number, move: string) => 
+    api.post('/game/rps/move', { session_id: sessionId, user_id: userId, move });
+export const getRPSStatus = (sessionId: number) => api.get(`/game/rps/${sessionId}`);
+export const resetRPSGame = (sessionId: number) => api.post(`/game/rps/${sessionId}/reset`);
+
+// Admin
+export const seedTMDB = (pages: number = 1, type: 'popular' | 'top_rated' = 'popular') => 
+    api.post('/admin/seed-tmdb', { pages, type });
+
 export default api;

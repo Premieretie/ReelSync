@@ -3,8 +3,9 @@ import { useParams, Link } from 'react-router-dom';
 import { getUsers, getRecommendations, getSharedList, getSessionById, updateSessionVisibility } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { MovieCard } from '@/components/MovieCard';
+import { RockPaperScissors } from '@/components/RockPaperScissors';
 import { Button } from '@/components/Button';
-import { Sparkles, History as HistoryIcon, ArrowLeft, Dice5, Share2, Globe, Lock, Copy, X } from 'lucide-react';
+import { Sparkles, History as HistoryIcon, ArrowLeft, Dice5, Share2, Globe, Lock, Copy, X, Trophy } from 'lucide-react';
 
 export const Results = () => {
   const { sessionId } = useParams();
@@ -21,6 +22,9 @@ export const Results = () => {
   const [isPublic, setIsPublic] = useState(false);
   const [sessionCode, setSessionCode] = useState('');
 
+  // RPS State
+  const [showRPS, setShowRPS] = useState(false);
+
   // Get session participant ID from storage (for voting/adding)
   const sessionUserId = localStorage.getItem('session_user_id');
   const participantId = sessionUserId ? parseInt(sessionUserId) : undefined;
@@ -30,6 +34,12 @@ export const Results = () => {
       loadSessionDetails();
       loadRecommendations();
       loadSharedList();
+
+      const interval = setInterval(() => {
+          loadSharedList();
+      }, 3000);
+
+      return () => clearInterval(interval);
     }
   }, [sessionId]);
 
@@ -83,6 +93,10 @@ export const Results = () => {
       navigator.clipboard.writeText(url);
       alert("Link copied!");
   };
+
+  // Check if we need a tie breaker
+  const matches = sharedList.filter(m => Number(m.likes) >= 2);
+  const needsTieBreaker = sharedList.length > 0 && matches.length === sharedList.length && matches.length > 1;
 
   return (
     <div className="min-h-screen bg-slate-950 p-4 relative">
@@ -221,18 +235,44 @@ export const Results = () => {
                 )}
 
                 {tab === 'shared' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {sharedList.length === 0 && <div className="text-slate-500 col-span-full text-center py-10">No movies added yet. Go pick some!</div>}
-                        {sharedList.map(item => (
-                            <MovieCard 
-                                key={item.id} 
-                                movie={item.movie_data} 
+                    <div className="space-y-8">
+                        {/* Tie Breaker Section */}
+                        {needsTieBreaker && (
+                            <div className="bg-gradient-to-r from-pink-900/20 to-purple-900/20 p-6 rounded-xl border border-pink-500/30 text-center animate-pulse">
+                                <h3 className="text-2xl font-bold text-white mb-2 flex items-center justify-center gap-2">
+                                    <Trophy className="text-yellow-400" /> IT'S A TIE!
+                                </h3>
+                                <p className="text-slate-300 mb-4">You have multiple matches. Settle it with a mini-game?</p>
+                                {!showRPS && (
+                                    <Button onClick={() => setShowRPS(true)} className="bg-pink-600 hover:bg-pink-700">
+                                        Play Rock Paper Scissors
+                                    </Button>
+                                )}
+                            </div>
+                        )}
+
+                        {showRPS && participantId && (
+                            <RockPaperScissors 
                                 sessionId={Number(sessionId)} 
                                 userId={participantId} 
-                                mode="shared" 
-                                onAction={loadSharedList}
+                                onComplete={(winner) => console.log('RPS Winner:', winner)} 
                             />
-                        ))}
+                        )}
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {sharedList.length === 0 && <div className="text-slate-500 col-span-full text-center py-10">No movies added yet. Go pick some!</div>}
+                            {sharedList.map(item => (
+                                <MovieCard 
+                                    key={item.id} 
+                                    movie={item.movie_data} 
+                                    sessionId={Number(sessionId)} 
+                                    userId={participantId} 
+                                    mode="shared" 
+                                    onAction={loadSharedList}
+                                    voteCounts={{ likes: Number(item.likes), dislikes: Number(item.dislikes) }}
+                                />
+                            ))}
+                        </div>
                     </div>
                 )}
             </>

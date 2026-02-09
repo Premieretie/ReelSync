@@ -4,7 +4,7 @@ import { createSession, getSession } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/Button';
 import { User, LogIn } from 'lucide-react';
-import logo from '../assets/logo.png';
+import logo from '../assets/CineMatch_Logo2.png';
 
 export const Home = () => {
   const [code, setCode] = useState('');

@@ -10,6 +10,7 @@ import { Register } from '@/pages/Register';
 import { Dashboard } from '@/pages/Dashboard';
 import { VerifyEmail } from '@/pages/VerifyEmail';
 import { Subscribe } from '@/pages/Subscribe';
+import { Admin } from '@/pages/Admin';
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
             <Route path="/verify/:token" element={<VerifyEmail />} />
             <Route path="/subscribe" element={<Subscribe />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/admin" element={<Admin />} />
             <Route path="/join/:code" element={<Sliders />} />
             <Route path="/results/:sessionId" element={<Results />} />
             <Route path="/history/:sessionId" element={<History />} />

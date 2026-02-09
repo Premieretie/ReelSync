@@ -4,7 +4,7 @@ import { getSession, joinSession, getUsers, getTrailers } from '@/lib/api';
 import { DualSlider } from '@/components/DualSlider';
 import { Button } from '@/components/Button';
 import { Users, Copy, CheckCircle } from 'lucide-react';
-import logo from '../assets/logo.png';
+import logo from '../assets/CineMatch_Logo2.png';
 
 const TrailerGrid = ({ movies, show }: { movies: any[], show: boolean }) => {
     return (
