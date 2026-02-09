@@ -203,7 +203,19 @@ async function initDb() {
             ['Monty Python and the Holy Grail', 1975, 'Comedy', 'Satire', 'Quest', 'Silly', 'Absurdism', 'England', 'Terry Gilliam', 8.2, 'urRkGvhXc8w'],
             ['The Grand Budapest Hotel', 2014, 'Comedy', 'Drama', 'Caper', 'Quirky', 'Loyalty', 'Hotel', 'Wes Anderson', 8.1, '1Fg5iWmQjwk'],
             ['Interstellar', 2014, 'Sci-Fi', 'Space', 'Exploration', 'Emotional', 'Love', 'Space', 'Christopher Nolan', 8.6, 'zSWdZVtXT7E'],
-            ['Parasite', 2019, 'Thriller', 'Dark Comedy', 'Social Satire', 'Dark', 'Class', 'Seoul', 'Bong Joon-ho', 8.5, '5xH0HfJHsaY']
+            ['Parasite', 2019, 'Thriller', 'Dark Comedy', 'Social Satire', 'Dark', 'Class', 'Seoul', 'Bong Joon-ho', 8.5, '5xH0HfJHsaY'],
+            
+            // New Movies for new sliders
+            ['Get Out', 2017, 'Horror', 'Thriller', 'Psychological', 'Scary', 'Racism', 'USA', 'Jordan Peele', 7.7, 'DzfpyUB60YY'],
+            ['Spirited Away', 2001, 'Animation', 'Fantasy', 'Coming of Age', 'Whimsical', 'Identity', 'Bathhouse', 'Hayao Miyazaki', 8.6, 'ByXuk9QqQkk'],
+            ['Mad Max: Fury Road', 2015, 'Action', 'Post-Apocalyptic', 'Chase', 'Intense', 'Survival', 'Wasteland', 'George Miller', 8.1, 'hEJnMQG9ev8'],
+            ['Eternal Sunshine of the Spotless Mind', 2004, 'Romance', 'Sci-Fi', 'Mind-bending', 'Emotional', 'Memory', 'Mind', 'Michel Gondry', 8.3, '07-QBnEkgXU'],
+            ['The Shining', 1980, 'Horror', 'Psychological', 'Haunted House', 'Scary', 'Isolation', 'Hotel', 'Stanley Kubrick', 8.4, 'S014oGZiSdI'],
+            ['Spider-Man: Into the Spider-Verse', 2018, 'Animation', 'Superhero', 'Origin Story', 'Exciting', 'Family', 'NYC', 'Rodney Rothman', 8.4, 'g4Hbz2jLxvQ'],
+            ['Arrival', 2016, 'Sci-Fi', 'Drama', 'First Contact', 'Slow', 'Communication', 'Global', 'Denis Villeneuve', 7.9, 'tFMo3UJ4B4g'],
+            ['Knives Out', 2019, 'Comedy', 'Mystery', 'Whodunit', 'Quirky', 'Family', 'Mansion', 'Rian Johnson', 7.9, 'qGqiHJTsRkQ'],
+            ['Hereditary', 2018, 'Horror', 'Drama', 'Occult', 'Disturbing', 'Grief', 'Home', 'Ari Aster', 7.3, 'V6wWKNij_1M'],
+            ['Paddington 2', 2017, 'Comedy', 'Family', 'Adventure', 'Comforting', 'Kindness', 'London', 'Paul King', 7.8, '52x5HJ9H8DM']
         ];
         await connection.query(sql, [values]);
     } else {
@@ -222,6 +234,31 @@ async function initDb() {
         ];
         for (const [title, key] of updates) {
             await connection.query('UPDATE movies SET youtube_key = ? WHERE movie_title = ? AND (youtube_key IS NULL OR youtube_key = "")', [key, title]);
+        }
+    }
+
+    // Ensure new slider movies exist (Upsert-like behavior)
+    const newSliderMovies = [
+        ['Get Out', 2017, 'Horror', 'Thriller', 'Psychological', 'Scary', 'Racism', 'USA', 'Jordan Peele', 7.7, 'DzfpyUB60YY'],
+        ['Spirited Away', 2001, 'Animation', 'Fantasy', 'Coming of Age', 'Whimsical', 'Identity', 'Bathhouse', 'Hayao Miyazaki', 8.6, 'ByXuk9QqQkk'],
+        ['Mad Max: Fury Road', 2015, 'Action', 'Post-Apocalyptic', 'Chase', 'Intense', 'Survival', 'Wasteland', 'George Miller', 8.1, 'hEJnMQG9ev8'],
+        ['Eternal Sunshine of the Spotless Mind', 2004, 'Romance', 'Sci-Fi', 'Mind-bending', 'Emotional', 'Memory', 'Mind', 'Michel Gondry', 8.3, '07-QBnEkgXU'],
+        ['The Shining', 1980, 'Horror', 'Psychological', 'Haunted House', 'Scary', 'Isolation', 'Hotel', 'Stanley Kubrick', 8.4, 'S014oGZiSdI'],
+        ['Spider-Man: Into the Spider-Verse', 2018, 'Animation', 'Superhero', 'Origin Story', 'Exciting', 'Family', 'NYC', 'Rodney Rothman', 8.4, 'g4Hbz2jLxvQ'],
+        ['Arrival', 2016, 'Sci-Fi', 'Drama', 'First Contact', 'Slow', 'Communication', 'Global', 'Denis Villeneuve', 7.9, 'tFMo3UJ4B4g'],
+        ['Knives Out', 2019, 'Comedy', 'Mystery', 'Whodunit', 'Quirky', 'Family', 'Mansion', 'Rian Johnson', 7.9, 'qGqiHJTsRkQ'],
+        ['Hereditary', 2018, 'Horror', 'Drama', 'Occult', 'Disturbing', 'Grief', 'Home', 'Ari Aster', 7.3, 'V6wWKNij_1M'],
+        ['Paddington 2', 2017, 'Comedy', 'Family', 'Adventure', 'Comforting', 'Kindness', 'London', 'Paul King', 7.8, '52x5HJ9H8DM']
+    ];
+
+    for (const movie of newSliderMovies) {
+        const [exists] = await connection.query('SELECT id FROM movies WHERE movie_title = ?', [movie[0]]);
+        if (exists.length === 0) {
+            await connection.query(
+                `INSERT INTO movies (movie_title, year, genre, sub_genre, story_type, tone, main_theme, setting_location, director, rating, youtube_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                movie
+            );
+            console.log(`Added new movie: ${movie[0]}`);
         }
     }
 

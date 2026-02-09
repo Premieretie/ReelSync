@@ -20,6 +20,11 @@ export const Sliders = () => {
   const [actionDialogue, setActionDialogue] = useState(2.5);
   const [realisticWeird, setRealisticWeird] = useState(2.5);
   const [classicModern, setClassicModern] = useState(2.5);
+  // New Sliders
+  const [safeScary, setSafeScary] = useState(2.5);
+  const [slowFast, setSlowFast] = useState(2.5);
+  const [indieBlockbuster, setIndieBlockbuster] = useState(2.5);
+  const [liveAnimated, setLiveAnimated] = useState(2.5);
 
   useEffect(() => {
     if (code) {
@@ -54,7 +59,11 @@ export const Sliders = () => {
         emotional_light: emotionalLight,
         action_dialogue: actionDialogue,
         realistic_weird: realisticWeird,
-        classic_modern: classicModern
+        classic_modern: classicModern,
+        safe_scary: safeScary,
+        slow_fast: slowFast,
+        indie_blockbuster: indieBlockbuster,
+        live_animated: liveAnimated
     };
 
     try {
@@ -144,6 +153,22 @@ export const Sliders = () => {
              <DualSlider 
                 leftLabel="Classic / Old School" rightLabel="Modern / Fresh" 
                 value={classicModern} onChange={setClassicModern} 
+            />
+             <DualSlider 
+                leftLabel="Safe / Comfort" rightLabel="Scary / Tense" 
+                value={safeScary} onChange={setSafeScary} 
+            />
+             <DualSlider 
+                leftLabel="Slow Burn" rightLabel="Fast Paced" 
+                value={slowFast} onChange={setSlowFast} 
+            />
+             <DualSlider 
+                leftLabel="Indie / Artsy" rightLabel="Blockbuster" 
+                value={indieBlockbuster} onChange={setIndieBlockbuster} 
+            />
+             <DualSlider 
+                leftLabel="Live Action" rightLabel="Animated" 
+                value={liveAnimated} onChange={setLiveAnimated} 
             />
         </div>
 

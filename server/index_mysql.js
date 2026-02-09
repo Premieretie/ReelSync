@@ -49,7 +49,25 @@ const generateNightProfile = (avg) => {
   if (avg.classic_modern < 2) adjectives.push("Vintage");
   else if (avg.classic_modern > 3) adjectives.push("Modern");
 
+  // New Sliders Profile Text
+  if (avg.safe_scary < 2) adjectives.push("Comforting");
+  else if (avg.safe_scary > 3) adjectives.push("Spooky");
+
+  if (avg.slow_fast < 2) adjectives.push("Slow-Burn");
+  else if (avg.slow_fast > 3) adjectives.push("Fast-Paced");
+
+  if (avg.indie_blockbuster < 2) adjectives.push("Artsy");
+  else if (avg.indie_blockbuster > 3) adjectives.push("Big-Budget");
+
+  if (avg.live_animated < 2) adjectives.push("Live-Action");
+  else if (avg.live_animated > 3) adjectives.push("Animated");
+
   if (adjectives.length === 0) return "A Perfectly Balanced Movie Night";
+  
+  // Pick random 3 if too many
+  if (adjectives.length > 3) {
+      adjectives = adjectives.sort(() => 0.5 - Math.random()).slice(0, 3);
+  }
   
   const last = adjectives.pop();
   return `A ${adjectives.join(", ")} and ${last} Vibe`;
@@ -289,7 +307,10 @@ app.post('/api/recommendations', async (req, res) => {
   const { users } = req.body;
   if (!users || users.length === 0) return res.status(400).json({ error: "No users provided" });
 
-  const keys = ['brainy_easy', 'emotional_light', 'action_dialogue', 'realistic_weird', 'classic_modern'];
+  const keys = [
+      'brainy_easy', 'emotional_light', 'action_dialogue', 'realistic_weird', 'classic_modern',
+      'safe_scary', 'slow_fast', 'indie_blockbuster', 'live_animated'
+  ];
   let avg = {};
   
   keys.forEach(k => {
@@ -315,6 +336,19 @@ app.post('/api/recommendations', async (req, res) => {
 
   if (avg.classic_modern < 2) conditions.push("year < 2000");
   else if (avg.classic_modern > 3) conditions.push("year >= 2000");
+
+  // New Filters
+  if (avg.safe_scary < 2) conditions.push("(genre NOT IN ('Horror', 'Thriller') AND tone NOT IN ('Dark', 'Scary', 'Violent', 'Ominous'))");
+  else if (avg.safe_scary > 3) conditions.push("(genre IN ('Horror', 'Thriller') OR tone IN ('Dark', 'Scary', 'Suspenseful'))");
+
+  if (avg.slow_fast < 2) conditions.push("(genre IN ('Drama', 'Documentary', 'Romance') OR tone IN ('Slow', 'Quiet', 'Atmospheric'))");
+  else if (avg.slow_fast > 3) conditions.push("(genre IN ('Action', 'Adventure', 'Thriller', 'Sci-Fi') OR tone IN ('Exciting', 'Intense', 'Fast-paced'))");
+
+  if (avg.indie_blockbuster < 2) conditions.push("(sub_genre IN ('Indie', 'Arthouse', 'Foreign') OR rating > 8.5)");
+  else if (avg.indie_blockbuster > 3) conditions.push("(genre IN ('Action', 'Adventure', 'Sci-Fi', 'Fantasy') AND year >= 2000)");
+
+  if (avg.live_animated < 2) conditions.push("genre != 'Animation'");
+  else if (avg.live_animated > 3) conditions.push("genre = 'Animation'");
 
   let sql = "SELECT * FROM movies";
   if (conditions.length > 0) {
