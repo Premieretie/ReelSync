@@ -22,6 +22,7 @@ export const addToSharedList = (sessionId: number, movieId: number, movieData: a
 export const getSharedList = (sessionId: number) => api.get(`/session/${sessionId}/list`);
 export const voteMovie = (sessionId: number, movieId: number, userId: number, vote: number) => 
   api.post('/vote', { session_id: sessionId, movie_id: movieId, user_id: userId, vote_value: vote });
+export const finalizeSession = (sessionId: number) => api.post(`/session/${sessionId}/finalize`);
 export const addToHistory = (sessionId: number, movieId: number, title: string, movieData: any, rating: number, accountId?: number) =>
     api.post('/history', { session_id: sessionId, movie_id: movieId, movie_title: title, movie_data: movieData, rating, account_id: accountId });
 export const getHistory = (sessionId: number) => api.get(`/history/${sessionId}`);

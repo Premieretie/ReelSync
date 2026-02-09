@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getUsers, getRecommendations, getSharedList, getSessionById, updateSessionVisibility } from '@/lib/api';
+import { getUsers, getRecommendations, getSharedList, getSessionById, updateSessionVisibility, finalizeSession } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { MovieCard } from '@/components/MovieCard';
 import { RockPaperScissors } from '@/components/RockPaperScissors';
 import { Button } from '@/components/Button';
-import { Sparkles, History as HistoryIcon, ArrowLeft, Dice5, Share2, Globe, Lock, Copy, X, Trophy } from 'lucide-react';
+import { Sparkles, History as HistoryIcon, ArrowLeft, Dice5, Share2, Globe, Lock, Copy, X, Trophy, CheckCheck } from 'lucide-react';
 
 export const Results = () => {
   const { sessionId } = useParams();
@@ -106,6 +106,18 @@ export const Results = () => {
       } catch(e) {
           console.error(e);
           alert("Failed to update visibility");
+      }
+  };
+
+  const handleFinalize = async () => {
+      if (!confirm("Are you sure? This will remove all movies that have more dislikes than likes.")) return;
+      try {
+          await finalizeSession(Number(sessionId));
+          loadSharedList();
+          alert("List finalized! Disliked movies have been removed.");
+      } catch(e) {
+          console.error(e);
+          alert("Failed to finalize list");
       }
   };
 
@@ -273,6 +285,22 @@ export const Results = () => {
 
                 {tab === 'shared' && (
                     <div className="space-y-8">
+                        {/* Finalize Controls */}
+                        <div className="flex justify-between items-center bg-slate-900/50 p-4 rounded-xl border border-slate-800">
+                            <div>
+                                <h3 className="text-lg font-bold text-white">Group Selection</h3>
+                                <p className="text-sm text-slate-400">Review votes and finalize the list</p>
+                            </div>
+                            {sharedList.length > 0 && (
+                                <Button 
+                                    onClick={handleFinalize}
+                                    className="bg-green-600 hover:bg-green-700 text-white"
+                                >
+                                    <CheckCheck size={18} className="mr-2"/> Finalize List
+                                </Button>
+                            )}
+                        </div>
+
                         {/* Tie Breaker Section */}
                         {needsTieBreaker && (
                             <div className="bg-gradient-to-r from-pink-900/20 to-purple-900/20 p-6 rounded-xl border border-pink-500/30 text-center animate-pulse">

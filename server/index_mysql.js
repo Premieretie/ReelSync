@@ -680,6 +680,35 @@ app.post('/api/vote', async (req, res) => {
   }
 });
 
+app.post('/api/session/:id/finalize', async (req, res) => {
+    try {
+        const [rows] = await db.query(`
+            SELECT sl.id, sl.movie_id, 
+            COALESCE(SUM(CASE WHEN v.vote_value = 1 THEN 1 ELSE 0 END), 0) as likes,
+            COALESCE(SUM(CASE WHEN v.vote_value = -1 THEN 1 ELSE 0 END), 0) as dislikes
+            FROM shared_list sl
+            LEFT JOIN votes v ON sl.session_id = v.session_id AND sl.movie_id = v.movie_id
+            WHERE sl.session_id = ?
+            GROUP BY sl.id
+        `, [req.params.id]);
+
+        let removedCount = 0;
+        for (const row of rows) {
+            // Remove if dislikes > likes (Strictly disliked)
+            // Split decision (likes === dislikes) is KEPT.
+            if (row.dislikes > row.likes) {
+                await db.query(`DELETE FROM shared_list WHERE id = ?`, [row.id]);
+                await db.query(`DELETE FROM votes WHERE session_id = ? AND movie_id = ?`, [req.params.id, row.movie_id]);
+                removedCount++;
+            }
+        }
+
+        res.json({ success: true, removed: removedCount, message: "List finalized" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // 6. Rock Paper Scissors Mini-game
 const rpsGames = {}; // In-memory store for simplicity (or use DB for persistence)
 
