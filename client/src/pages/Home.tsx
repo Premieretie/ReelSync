@@ -62,12 +62,12 @@ export const Home = () => {
 
       <div className="max-w-md w-full text-center space-y-8">
         <div className="flex justify-center mb-6">
-           <img src={logo} alt="ReelSync Logo" className="w-32 h-32 object-contain rounded-full shadow-lg" />
+           <img src={logo} alt="ReelSync Logo" className="w-128 h-128 object-contain rounded-full shadow-lg" />
         </div>
         
-        <h1 className="text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
+        {/* <h1 className="text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
           ReelSync
-        </h1>
+        </h1> */}
         <p className="text-slate-400 text-lg">
           Find the perfect date night movie without the arguments.
         </p>

@@ -303,6 +303,30 @@ app.get('/api/session/:id/users', async (req, res) => {
 });
 
 // 3. Recommendation Engine (Local DB)
+app.get('/api/movies/trailers', async (req, res) => {
+    try {
+        // Get random movies that have a youtube key
+        const [rows] = await db.query(`
+            SELECT id, movie_title, youtube_key 
+            FROM movies 
+            WHERE youtube_key IS NOT NULL AND youtube_key != '' 
+            ORDER BY RAND() 
+            LIMIT 60
+        `);
+        
+        const results = rows.map(r => ({
+            id: r.id,
+            title: r.movie_title,
+            // Take the first key if there are multiple
+            key: r.youtube_key.split(',')[0].trim()
+        }));
+        
+        res.json({ results });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.post('/api/recommendations', async (req, res) => {
   const { users } = req.body;
   if (!users || users.length === 0) return res.status(400).json({ error: "No users provided" });

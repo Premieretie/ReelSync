@@ -15,6 +15,7 @@ export const getSessionById = (id: number) => api.get(`/session/id/${id}`);
 export const updateSessionVisibility = (id: number, isPublic: boolean) => api.put(`/session/${id}/visibility`, { is_public: isPublic });
 export const getUsers = (sessionId: number) => api.get(`/session/${sessionId}/users`);
 export const getRecommendations = (users: any[]) => api.post('/recommendations', { users });
+export const getTrailers = () => api.get('/movies/trailers');
 export const getMovieVideos = (movieId: number) => api.get(`/movie/${movieId}/videos`);
 export const addToSharedList = (sessionId: number, movieId: number, movieData: any, addedBy: number) => 
   api.post('/list/add', { session_id: sessionId, movie_id: movieId, movie_data: movieData, added_by: addedBy });
