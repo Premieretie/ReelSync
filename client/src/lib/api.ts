@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: import.meta.env.PROD ? 'https://borty-ernesto-fairily.ngrok-free.dev/api' : '/api',
+  baseURL: 'https://borty-ernesto-fairily.ngrok-free.dev/api',
   headers: {
     'ngrok-skip-browser-warning': 'true'
   }

@@ -10,7 +10,7 @@ const app = express();
 const PORT = process.env.PORT || 3002;
 
 app.use(cors({
-  origin: ['http://localhost:5173', 'https://premieretie.github.io'],
+  origin: ['http://localhost:5173', 'https://premieretie.github.io', 'https://borty-ernesto-fairily.ngrok-free.dev'],
   credentials: true
 }));
 app.use(express.json());
