@@ -481,7 +481,7 @@ app.get('/api/movies/trailers', async (req, res) => {
 });
 
 app.post('/api/recommendations', async (req, res) => {
-  const { users } = req.body;
+  const { users, seen_ids } = req.body;
   if (!users || users.length === 0) return res.status(400).json({ error: "No users provided" });
 
   const keys = [
@@ -498,6 +498,7 @@ app.post('/api/recommendations', async (req, res) => {
 
   // Build Dynamic Query based on preferences
   let conditions = [];
+  let params = [];
   
   if (avg.brainy_easy < 2) conditions.push("(genre IN ('Documentary', 'Drama', 'Sci-Fi') OR story_type = 'Mind-bending')");
   else if (avg.brainy_easy > 3) conditions.push("(genre IN ('Comedy', 'Action', 'Adventure') OR tone IN ('Silly', 'Light'))");
@@ -527,6 +528,14 @@ app.post('/api/recommendations', async (req, res) => {
   if (avg.live_animated < 2) conditions.push("genre != 'Animation'");
   else if (avg.live_animated > 3) conditions.push("genre = 'Animation'");
 
+  // Exclude seen movies
+  if (seen_ids && Array.isArray(seen_ids) && seen_ids.length > 0) {
+      // Use placeholders for safety
+      const placeholders = seen_ids.map(() => '?').join(',');
+      conditions.push(`id NOT IN (${placeholders})`);
+      params.push(...seen_ids);
+  }
+
   let sql = "SELECT * FROM movies";
   if (conditions.length > 0) {
       sql += " WHERE " + conditions.join(" AND ");
@@ -535,11 +544,23 @@ app.post('/api/recommendations', async (req, res) => {
   sql += " ORDER BY RAND() LIMIT 20";
 
   try {
-    let [movies] = await db.query(sql);
+    let [movies] = await db.query(sql, params);
     
-    // Fallback
+    // Fallback if empty (e.g. filters too strict or ran out of movies)
     if (movies.length === 0) {
-        const [fallback] = await db.query("SELECT * FROM movies ORDER BY rating DESC LIMIT 10");
+        // Only fetch fallback if we really have no matches. 
+        // We also respect seen_ids in fallback if possible, but keep it simple.
+        let fallbackSql = "SELECT * FROM movies";
+        let fallbackParams = [];
+        
+        if (seen_ids && seen_ids.length > 0) {
+             const placeholders = seen_ids.map(() => '?').join(',');
+             fallbackSql += ` WHERE id NOT IN (${placeholders})`;
+             fallbackParams.push(...seen_ids);
+        }
+        
+        fallbackSql += " ORDER BY rating DESC LIMIT 10";
+        const [fallback] = await db.query(fallbackSql, fallbackParams);
         movies.push(...fallback);
     }
 

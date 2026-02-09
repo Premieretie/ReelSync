@@ -14,6 +14,7 @@ export const Results = () => {
   const [profile, setProfile] = useState('');
   const [modifiers, setModifiers] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [tab, setTab] = useState<'recommendations' | 'shared'>('recommendations');
   const [sharedList, setSharedList] = useState<any[]>([]);
   
@@ -66,6 +67,26 @@ export const Results = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleLoadMore = async () => {
+      setLoadingMore(true);
+      try {
+          const usersRes = await getUsers(Number(sessionId));
+          // Pass current movie IDs to exclude them from next batch
+          const seenIds = movies.map(m => m.id);
+          const recRes = await getRecommendations(usersRes.data, seenIds);
+          
+          if (recRes.data.results.length > 0) {
+              setMovies(prev => [...prev, ...recRes.data.results]);
+          } else {
+              alert("No more matching movies found!");
+          }
+      } catch(e) {
+          console.error(e);
+      } finally {
+          setLoadingMore(false);
+      }
   };
 
   const loadSharedList = async () => {
@@ -220,6 +241,7 @@ export const Results = () => {
         ) : (
             <>
                 {tab === 'recommendations' && (
+                    <>
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                         {movies.map(movie => (
                             <MovieCard 
@@ -232,6 +254,21 @@ export const Results = () => {
                             />
                         ))}
                     </div>
+                    
+                    <div className="mt-8 flex justify-center">
+                        <Button 
+                            onClick={handleLoadMore} 
+                            disabled={loadingMore}
+                            className="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
+                        >
+                            {loadingMore ? (
+                                <span className="flex items-center gap-2"><Sparkles className="animate-spin" size={16} /> Loading...</span>
+                            ) : (
+                                "Load More Movies"
+                            )}
+                        </Button>
+                    </div>
+                    </>
                 )}
 
                 {tab === 'shared' && (
