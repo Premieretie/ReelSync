@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Play, Plus, ThumbsUp, ThumbsDown, Check, Heart } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { addToSharedList, voteMovie, addToHistory, addToFavorites } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { useVideoPlayer } from '@/context/VideoPlayerContext';
@@ -16,6 +17,7 @@ interface MovieCardProps {
 export const MovieCard: React.FC<MovieCardProps> = ({ movie, sessionId, userId, mode, onAction }) => {
   const [added, setAdded] = useState(false);
   const [favorited, setFavorited] = useState(false);
+  const [userVote, setUserVote] = useState<'like' | 'dislike' | null>(null);
   const { user } = useAuth();
   const { playMovie } = useVideoPlayer();
 
@@ -36,6 +38,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, sessionId, userId, 
 
   const handleVote = async (val: number) => {
     if (!userId) return;
+    setUserVote(val === 1 ? 'like' : 'dislike');
     try {
       await voteMovie(sessionId, movie.id, userId, val);
       // Optimistic update or callback could go here
@@ -87,6 +90,32 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, sessionId, userId, 
             </button>
         )}
 
+        {/* Voted Indicator (Top Right - Left of Favorite) */}
+        <div className="absolute top-2 right-12 z-10 flex gap-2">
+            {userVote === 'like' && (
+                <motion.div 
+                    layoutId={`vote-like-${movie.id}`}
+                    className="p-2 bg-green-600 rounded-full text-white shadow-lg"
+                    initial={{ scale: 0.5, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                >
+                    <ThumbsUp size={16} />
+                </motion.div>
+            )}
+            {userVote === 'dislike' && (
+                <motion.div 
+                    layoutId={`vote-dislike-${movie.id}`}
+                    className="p-2 bg-red-600 rounded-full text-white shadow-lg"
+                    initial={{ scale: 0.5, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                >
+                    <ThumbsDown size={16} />
+                </motion.div>
+            )}
+        </div>
+
         {/* Hover Overlay */}
         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-4 p-4">
           <button onClick={handlePlayTrailer} className="flex items-center gap-2 px-4 py-2 bg-red-600 rounded-full hover:bg-red-700 transition font-bold">
@@ -102,10 +131,26 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, sessionId, userId, 
              <div className="flex items-center gap-2 text-green-400 font-bold"><Check size={16} /> Added</div>
           )}
 
-          {mode === 'shared' && (
+          {mode === 'shared' && !userVote && (
              <div className="flex gap-4">
-                <button onClick={() => handleVote(1)} className="p-3 bg-green-600 rounded-full hover:bg-green-700"><ThumbsUp size={20} /></button>
-                <button onClick={() => handleVote(-1)} className="p-3 bg-red-600 rounded-full hover:bg-red-700"><ThumbsDown size={20} /></button>
+                <motion.button 
+                    layoutId={`vote-like-${movie.id}`}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => handleVote(1)} 
+                    className="p-3 bg-green-600 rounded-full hover:bg-green-700"
+                >
+                    <ThumbsUp size={20} />
+                </motion.button>
+                <motion.button 
+                    layoutId={`vote-dislike-${movie.id}`}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => handleVote(-1)} 
+                    className="p-3 bg-red-600 rounded-full hover:bg-red-700"
+                >
+                    <ThumbsDown size={20} />
+                </motion.button>
              </div>
           )}
           
