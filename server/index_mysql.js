@@ -9,7 +9,10 @@ const db = require('./database_mysql');
 const app = express();
 const PORT = process.env.PORT || 3002;
 
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:5173', 'https://premieretie.github.io'],
+  credentials: true
+}));
 app.use(express.json());
 
 // --- Helper Functions ---

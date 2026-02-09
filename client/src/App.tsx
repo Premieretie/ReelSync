@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { HashRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '@/context/AuthContext';
 import { VideoPlayerProvider } from '@/context/VideoPlayerContext';
 import { Home } from '@/pages/Home';
@@ -15,7 +15,7 @@ function App() {
   return (
     <AuthProvider>
       <VideoPlayerProvider>
-        <BrowserRouter>
+        <HashRouter>
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
@@ -27,7 +27,7 @@ function App() {
             <Route path="/results/:sessionId" element={<Results />} />
             <Route path="/history/:sessionId" element={<History />} />
           </Routes>
-        </BrowserRouter>
+        </HashRouter>
       </VideoPlayerProvider>
     </AuthProvider>
   );
