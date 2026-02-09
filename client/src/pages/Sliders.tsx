@@ -173,11 +173,11 @@ export const Sliders = () => {
   const rightTrailers = trailers.slice(mid);
 
   return (
-    <div className="min-h-screen bg-slate-950 p-6 flex justify-center overflow-x-hidden">
-      <div className="flex w-full max-w-[1600px] gap-8">
+    <div className="min-h-screen bg-slate-950 p-6 flex items-center justify-center overflow-x-hidden">
+      <div className="flex w-full max-w-[1600px] gap-8 items-center">
         
         {/* Left Panel */}
-        <div className="hidden xl:block flex-1 bg-slate-700/30 rounded-2xl border border-slate-800/50 p-4 overflow-hidden">
+        <div className="hidden xl:block flex-1 bg-slate-700/30 rounded-3xl border border-slate-800/50 p-4 h-[65vh] overflow-hidden">
             <TrailerGrid movies={leftTrailers} show={videosReady} />
         </div>
 
@@ -244,7 +244,7 @@ export const Sliders = () => {
         </div>
 
         {/* Right Panel */}
-        <div className="hidden xl:block flex-1 bg-slate-700/30 rounded-2xl border border-slate-800/50 p-4 overflow-hidden">
+        <div className="hidden xl:block flex-1 bg-slate-700/30 rounded-3xl border border-slate-800/50 p-4 h-[65vh] overflow-hidden">
             <TrailerGrid movies={rightTrailers} show={videosReady} />
         </div>
 
