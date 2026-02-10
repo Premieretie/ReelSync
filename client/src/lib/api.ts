@@ -22,6 +22,7 @@ export const addToSharedList = (sessionId: number, movieId: number, movieData: a
 export const getSharedList = (sessionId: number) => api.get(`/session/${sessionId}/list`);
 export const voteMovie = (sessionId: number, movieId: number, userId: number, vote: number) => 
   api.post('/vote', { session_id: sessionId, movie_id: movieId, user_id: userId, vote_value: vote });
+export const removeMovieFromList = (sessionId: number, movieId: number) => api.post('/list/remove', { session_id: sessionId, movie_id: movieId });
 export const finalizeSession = (sessionId: number) => api.post(`/session/${sessionId}/finalize`);
 export const addToHistory = (sessionId: number, movieId: number, title: string, movieData: any, rating: number, accountId?: number) =>
     api.post('/history', { session_id: sessionId, movie_id: movieId, movie_title: title, movie_data: movieData, rating, account_id: accountId });
@@ -41,6 +42,13 @@ export const submitRPSMove = (sessionId: number, userId: number, move: string) =
     api.post('/game/rps/move', { session_id: sessionId, user_id: userId, move });
 export const getRPSStatus = (sessionId: number) => api.get(`/game/rps/${sessionId}`);
 export const resetRPSGame = (sessionId: number) => api.post(`/game/rps/${sessionId}/reset`);
+
+// Movie IQ
+export const startMovieIQ = (sessionId: number) => api.post('/game/iq/start', { session_id: sessionId });
+export const getMovieIQStatus = (sessionId: number) => api.get(`/game/iq/${sessionId}`);
+export const submitMovieIQAnswer = (sessionId: number, userId: number, nickname: string, answer: string) => 
+    api.post('/game/iq/answer', { session_id: sessionId, user_id: userId, nickname, answer });
+export const resetMovieIQ = (sessionId: number) => api.post(`/game/iq/${sessionId}/reset`);
 
 // Admin
 export const seedTMDB = (pages: number = 1, type: 'popular' | 'top_rated' = 'popular') => 

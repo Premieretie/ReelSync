@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Play, Plus, ThumbsUp, ThumbsDown, Check, Heart, Scale, Sparkles } from 'lucide-react';
+import { Play, Plus, ThumbsUp, ThumbsDown, Check, Heart, Scale, Sparkles, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { addToSharedList, voteMovie, addToHistory, addToFavorites } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -12,10 +12,11 @@ interface MovieCardProps {
   userId?: number;
   mode: 'recommendation' | 'shared' | 'history';
   onAction?: () => void;
+  onRemove?: () => void;
   voteCounts?: { likes: number; dislikes: number };
 }
 
-export const MovieCard: React.FC<MovieCardProps> = ({ movie, sessionId, userId, mode, onAction, voteCounts }) => {
+export const MovieCard: React.FC<MovieCardProps> = ({ movie, sessionId, userId, mode, onAction, onRemove, voteCounts }) => {
   const [added, setAdded] = useState(false);
   const [favorited, setFavorited] = useState(false);
   const [userVote, setUserVote] = useState<'like' | 'dislike' | null>(null);
@@ -107,6 +108,17 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, sessionId, userId, 
                 className={cn("absolute top-2 right-2 p-2 rounded-full transition shadow-lg z-10", favorited ? "bg-pink-600 text-white" : "bg-black/50 text-white hover:bg-pink-600")}
             >
                 <Heart size={16} fill={favorited ? "currentColor" : "none"} />
+            </button>
+        )}
+
+        {/* Remove Button (For Movie IQ Winner) */}
+        {onRemove && (
+            <button 
+                onClick={(e) => { e.stopPropagation(); onRemove(); }}
+                className="absolute top-2 right-12 p-2 rounded-full bg-red-600 text-white shadow-lg z-30 hover:bg-red-700 hover:scale-110 transition"
+                title="Remove from list"
+            >
+                <X size={16} />
             </button>
         )}
 

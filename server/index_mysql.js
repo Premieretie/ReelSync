@@ -711,6 +711,71 @@ app.post('/api/session/:id/finalize', async (req, res) => {
 
 // 6. Rock Paper Scissors Mini-game
 const rpsGames = {}; // In-memory store for simplicity (or use DB for persistence)
+const movieIQGames = {}; // In-memory store for Movie IQ
+
+app.post('/api/list/remove', async (req, res) => {
+  const { session_id, movie_id } = req.body;
+  try {
+    await db.query(`DELETE FROM shared_list WHERE session_id = ? AND movie_id = ?`, [session_id, movie_id]);
+    await db.query(`DELETE FROM votes WHERE session_id = ? AND movie_id = ?`, [session_id, movie_id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Movie IQ Routes
+app.post('/api/game/iq/start', (req, res) => {
+    const { session_id } = req.body;
+    
+    // Simple question bank - in production, fetch from TMDB or larger DB
+    const questions = [
+        { q: "Who directed 'Inception'?", a: "Christopher Nolan", options: ["Christopher Nolan", "Steven Spielberg", "Quentin Tarantino", "James Cameron"] },
+        { q: "What is the name of the hobbit played by Elijah Wood?", a: "Frodo", options: ["Frodo", "Sam", "Merry", "Pippin"] },
+        { q: "Which movie features the quote 'Here's Johnny!'?", a: "The Shining", options: ["The Shining", "Psycho", "It", "Misery"] },
+        { q: "In 'The Matrix', what color is the pill Neo takes?", a: "Red", options: ["Red", "Blue", "Green", "Purple"] },
+        { q: "Who voiced Woody in 'Toy Story'?", a: "Tom Hanks", options: ["Tom Hanks", "Tim Allen", "Billy Crystal", "Robin Williams"] },
+        { q: "What is the highest-grossing film of all time (unadjusted)?", a: "Avatar", options: ["Avatar", "Avengers: Endgame", "Titanic", "Star Wars: The Force Awakens"] }
+    ];
+
+    const randomQ = questions[Math.floor(Math.random() * questions.length)];
+    
+    movieIQGames[session_id] = {
+        active: true,
+        question: randomQ,
+        winner: null,
+        startTime: Date.now()
+    };
+
+    res.json({ success: true });
+});
+
+app.get('/api/game/iq/:session_id', (req, res) => {
+    const game = movieIQGames[req.params.session_id];
+    res.json(game || { active: false, winner: null });
+});
+
+app.post('/api/game/iq/answer', (req, res) => {
+    const { session_id, user_id, nickname, answer } = req.body;
+    const game = movieIQGames[session_id];
+
+    if (!game || !game.active || game.winner) {
+        return res.json({ success: false, message: "Game not active or already finished" });
+    }
+
+    if (answer === game.question.a) {
+        game.winner = { id: user_id, nickname };
+        game.active = false;
+        res.json({ success: true, winner: true });
+    } else {
+        res.json({ success: false, winner: false });
+    }
+});
+
+app.post('/api/game/iq/:session_id/reset', (req, res) => {
+    delete movieIQGames[req.params.session_id];
+    res.json({ success: true });
+});
 
 app.post('/api/game/rps/move', (req, res) => {
     const { session_id, user_id, move } = req.body; // move: 'rock', 'paper', 'scissors'

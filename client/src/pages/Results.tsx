@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getUsers, getRecommendations, getSharedList, getSessionById, updateSessionVisibility, finalizeSession } from '@/lib/api';
+import { getUsers, getRecommendations, getSharedList, getSessionById, updateSessionVisibility, finalizeSession, removeMovieFromList } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { MovieCard } from '@/components/MovieCard';
 import { RockPaperScissors } from '@/components/RockPaperScissors';
+import { MovieIQ } from '@/components/MovieIQ';
 import { Button } from '@/components/Button';
-import { Sparkles, History as HistoryIcon, ArrowLeft, Dice5, Share2, Globe, Lock, Copy, X, Trophy, CheckCheck } from 'lucide-react';
+import { Sparkles, History as HistoryIcon, ArrowLeft, Dice5, Share2, Globe, Lock, Copy, X, Trophy, CheckCheck, Brain } from 'lucide-react';
 
 export const Results = () => {
   const { sessionId } = useParams();
@@ -26,9 +27,16 @@ export const Results = () => {
   // RPS State
   const [showRPS, setShowRPS] = useState(false);
 
+  // Movie IQ & Spin State
+  const [showMovieIQ, setShowMovieIQ] = useState(false);
+  const [canRemoveMovie, setCanRemoveMovie] = useState(false);
+  const [spinResult, setSpinResult] = useState<any>(null);
+  const [isSpinning, setIsSpinning] = useState(false);
+
   // Get session participant ID from storage (for voting/adding)
   const sessionUserId = localStorage.getItem('session_user_id');
   const participantId = sessionUserId ? parseInt(sessionUserId) : undefined;
+  const participantName = localStorage.getItem('session_nickname') || 'Guest';
 
   useEffect(() => {
     if (sessionId) {
@@ -121,6 +129,39 @@ export const Results = () => {
       }
   };
 
+  const handleRemoveMovie = async (movieId: number) => {
+      if (!confirm("Remove this movie from the shared list?")) return;
+      try {
+          await removeMovieFromList(Number(sessionId), movieId);
+          loadSharedList();
+          setCanRemoveMovie(false); // Reset power after use
+          alert("Movie removed!");
+      } catch(e) {
+          console.error(e);
+      }
+  };
+
+  const handleSpinWheel = () => {
+      if (sharedList.length === 0) return;
+      setIsSpinning(true);
+      
+      // Simple visual spin effect
+      let duration = 3000;
+      let interval = 100;
+      let elapsed = 0;
+      
+      const spinInterval = setInterval(() => {
+          const random = sharedList[Math.floor(Math.random() * sharedList.length)];
+          setSpinResult(random.movie_data);
+          elapsed += interval;
+          
+          if (elapsed >= duration) {
+              clearInterval(spinInterval);
+              setIsSpinning(false);
+          }
+      }, interval);
+  };
+
   const copyLink = () => {
       const url = `${window.location.origin}/results/${sessionId}`;
       navigator.clipboard.writeText(url);
@@ -197,6 +238,58 @@ export const Results = () => {
                           <p className="text-2xl font-mono tracking-widest text-purple-400">{sessionCode}</p>
                       </div>
                   </div>
+              </div>
+          </div>
+      )}
+
+      {/* Spin Result Modal */}
+      {spinResult && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+            <div className="bg-slate-900 border-2 border-purple-500 rounded-2xl p-6 max-w-sm w-full relative text-center shadow-[0_0_50px_rgba(168,85,247,0.4)]">
+                <button onClick={() => setSpinResult(null)} className="absolute top-4 right-4 text-slate-400 hover:text-white">
+                    <X size={20} />
+                </button>
+                
+                <h3 className="text-2xl font-bold text-white mb-6 animate-bounce">
+                    {isSpinning ? "Spinning..." : "We Have a Winner!"}
+                </h3>
+                
+                <div className="aspect-[2/3] w-48 mx-auto mb-4 rounded-lg overflow-hidden shadow-2xl relative">
+                     {spinResult.poster_path ? (
+                        <img 
+                            src={`https://image.tmdb.org/t/p/w500${spinResult.poster_path}`} 
+                            alt={spinResult.title}
+                            className="w-full h-full object-cover"
+                        />
+                     ) : (
+                         <div className="w-full h-full bg-slate-800 flex items-center justify-center">No Image</div>
+                     )}
+                </div>
+
+                <h4 className="text-xl font-bold text-white">{spinResult.title}</h4>
+                <p className="text-slate-400 text-sm mt-2">{spinResult.release_date?.split('-')[0]}</p>
+            </div>
+        </div>
+      )}
+
+      {/* Movie IQ Modal */}
+      {showMovieIQ && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
+              <div className="bg-slate-900 border border-slate-700 rounded-2xl p-2 max-w-lg w-full relative">
+                  <button onClick={() => setShowMovieIQ(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white z-10">
+                      <X size={20} />
+                  </button>
+                  <MovieIQ 
+                    sessionId={Number(sessionId)} 
+                    userId={participantId!} 
+                    nickname={participantName}
+                    onWin={() => {
+                        setCanRemoveMovie(true);
+                        setShowMovieIQ(false);
+                        alert("You won! You can now remove one movie from the list.");
+                    }}
+                    onClose={() => setShowMovieIQ(false)}
+                  />
               </div>
           </div>
       )}
@@ -286,19 +379,37 @@ export const Results = () => {
                 {tab === 'shared' && (
                     <div className="space-y-8">
                         {/* Finalize Controls */}
-                        <div className="flex justify-between items-center bg-slate-900/50 p-4 rounded-xl border border-slate-800">
+                        <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-slate-900/50 p-4 rounded-xl border border-slate-800">
                             <div>
                                 <h3 className="text-lg font-bold text-white">Group Selection</h3>
                                 <p className="text-sm text-slate-400">Review votes and finalize the list</p>
                             </div>
-                            {sharedList.length > 0 && (
-                                <Button 
-                                    onClick={handleFinalize}
-                                    className="bg-green-600 hover:bg-green-700 text-white"
-                                >
-                                    <CheckCheck size={18} className="mr-2"/> Finalize List
-                                </Button>
-                            )}
+                            <div className="flex gap-2">
+                                {sharedList.length > 2 && (
+                                    <>
+                                        <Button 
+                                            onClick={handleSpinWheel}
+                                            className="bg-purple-600 hover:bg-purple-700 text-white"
+                                        >
+                                            <Dice5 size={18} className="mr-2"/> Spin Wheel
+                                        </Button>
+                                        <Button 
+                                            onClick={() => setShowMovieIQ(true)}
+                                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                                        >
+                                            <Brain size={18} className="mr-2"/> Movie IQ
+                                        </Button>
+                                    </>
+                                )}
+                                {sharedList.length > 0 && (
+                                    <Button 
+                                        onClick={handleFinalize}
+                                        className="bg-green-600 hover:bg-green-700 text-white"
+                                    >
+                                        <CheckCheck size={18} className="mr-2"/> Finalize List
+                                    </Button>
+                                )}
+                            </div>
                         </div>
 
                         {/* Tie Breaker Section */}
@@ -323,6 +434,13 @@ export const Results = () => {
                                 onComplete={(winner) => console.log('RPS Winner:', winner)} 
                             />
                         )}
+                        
+                        {canRemoveMovie && (
+                            <div className="bg-yellow-500/20 border border-yellow-500 text-yellow-200 p-4 rounded-xl text-center animate-pulse">
+                                <h3 className="font-bold">POWER UNLOCKED!</h3>
+                                <p>You can remove 1 movie from the list. Click the red X on a movie.</p>
+                            </div>
+                        )}
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {sharedList.length === 0 && <div className="text-slate-500 col-span-full text-center py-10">No movies added yet. Go pick some!</div>}
@@ -334,6 +452,7 @@ export const Results = () => {
                                     userId={participantId} 
                                     mode="shared" 
                                     onAction={loadSharedList}
+                                    onRemove={canRemoveMovie ? () => handleRemoveMovie(item.movie_id) : undefined}
                                     voteCounts={{ likes: Number(item.likes), dislikes: Number(item.dislikes) }}
                                 />
                             ))}
