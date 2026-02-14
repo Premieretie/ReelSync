@@ -516,8 +516,8 @@ app.post('/api/recommendations', async (req, res) => {
   else if (avg.classic_modern > 3) conditions.push("year >= 2000");
 
   // New Filters
-  if (avg.safe_scary < 2) conditions.push("(genre NOT IN ('Horror', 'Thriller') AND tone NOT IN ('Dark', 'Scary', 'Violent', 'Ominous'))");
-  else if (avg.safe_scary > 3) conditions.push("(genre IN ('Horror', 'Thriller') OR tone IN ('Dark', 'Scary', 'Suspenseful'))");
+  if (avg.safe_scary < 2) conditions.push("(genre NOT IN ('Horror', 'Thriller') AND sub_genre NOT IN ('Horror', 'Thriller') AND tone NOT IN ('Dark', 'Scary', 'Violent', 'Ominous'))");
+  else if (avg.safe_scary > 3) conditions.push("(genre IN ('Horror', 'Thriller') OR sub_genre IN ('Horror', 'Thriller') OR tone IN ('Dark', 'Scary', 'Suspenseful'))");
 
   if (avg.slow_fast < 2) conditions.push("(genre IN ('Drama', 'Documentary', 'Romance') OR tone IN ('Slow', 'Quiet', 'Atmospheric'))");
   else if (avg.slow_fast > 3) conditions.push("(genre IN ('Action', 'Adventure', 'Thriller', 'Sci-Fi') OR tone IN ('Exciting', 'Intense', 'Fast-paced'))");
@@ -525,8 +525,9 @@ app.post('/api/recommendations', async (req, res) => {
   if (avg.indie_blockbuster < 2) conditions.push("(sub_genre IN ('Indie', 'Arthouse', 'Foreign') OR rating > 8.5)");
   else if (avg.indie_blockbuster > 3) conditions.push("(genre IN ('Action', 'Adventure', 'Sci-Fi', 'Fantasy') AND year >= 2000)");
 
-  if (avg.live_animated < 2) conditions.push("genre != 'Animation'");
-  else if (avg.live_animated > 3) conditions.push("genre = 'Animation'");
+  // Strict check for Animation to avoid mood mismatches
+  if (avg.live_animated < 2) conditions.push("(genre != 'Animation' AND sub_genre != 'Animation')");
+  else if (avg.live_animated > 3) conditions.push("(genre = 'Animation' OR sub_genre = 'Animation')");
 
   // Exclude seen movies
   if (seen_ids && Array.isArray(seen_ids) && seen_ids.length > 0) {
@@ -550,14 +551,18 @@ app.post('/api/recommendations', async (req, res) => {
     if (movies.length === 0) {
         // Only fetch fallback if we really have no matches. 
         // We also respect seen_ids in fallback if possible, but keep it simple.
-        let fallbackSql = "SELECT * FROM movies";
+        let fallbackSql = "SELECT * FROM movies WHERE 1=1";
         let fallbackParams = [];
         
         if (seen_ids && seen_ids.length > 0) {
              const placeholders = seen_ids.map(() => '?').join(',');
-             fallbackSql += ` WHERE id NOT IN (${placeholders})`;
+             fallbackSql += ` AND id NOT IN (${placeholders})`;
              fallbackParams.push(...seen_ids);
         }
+
+        // Apply critical filters to fallback too
+        if (avg.live_animated < 2) fallbackSql += " AND (genre != 'Animation' AND sub_genre != 'Animation')";
+        else if (avg.live_animated > 3) fallbackSql += " AND (genre = 'Animation' OR sub_genre = 'Animation')";
         
         fallbackSql += " ORDER BY rating DESC LIMIT 10";
         const [fallback] = await db.query(fallbackSql, fallbackParams);
