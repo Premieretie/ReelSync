@@ -484,9 +484,23 @@ app.post('/api/recommendations', async (req, res) => {
   const { users, seen_ids } = req.body;
   if (!users || users.length === 0) return res.status(400).json({ error: "No users provided" });
 
+  // Utility: add keyword-based LIKE matches on overview for mood reinforcement
+  const addKeywordFilter = (keywords, negate = false) => {
+      if (!Array.isArray(keywords) || keywords.length === 0) return;
+      const likeClauses = keywords.map(() => `LOWER(overview) LIKE ?`);
+      const clause = `(${likeClauses.join(' OR ')})`;
+      if (negate) {
+          conditions.push(`NOT ${clause}`);
+          params.push(...keywords.map(k => `%${k.toLowerCase()}%`));
+      } else {
+          conditions.push(clause);
+          params.push(...keywords.map(k => `%${k.toLowerCase()}%`));
+      }
+  };
+
   const keys = [
       'brainy_easy', 'emotional_light', 'action_dialogue', 'realistic_weird', 'classic_modern',
-      'safe_scary', 'slow_fast', 'indie_blockbuster', 'live_animated'
+      'safe_scary', 'slow_fast', 'indie_blockbuster', 'live_animated', 'hollywood_foreign'
   ];
   let avg = {};
   
@@ -506,14 +520,28 @@ app.post('/api/recommendations', async (req, res) => {
   if (avg.brainy_easy < -0.1) conditions.push("(genre IN ('Documentary', 'Drama', 'Sci-Fi') OR story_type = 'Mind-bending')");
   else if (avg.brainy_easy > 0.1) conditions.push("(genre IN ('Comedy', 'Action', 'Adventure') OR tone IN ('Silly', 'Light'))");
 
+  // Keywords to amplify brainy vs easy moods
+  if (avg.brainy_easy < -0.1) addKeywordFilter(['mind-bending', 'philosoph', 'twist', 'puzzle', 'mystery']);
+  else if (avg.brainy_easy > 0.1) addKeywordFilter(['feel-good', 'lighthearted', 'family', 'buddy', 'holiday']);
+
   if (avg.emotional_light < -0.1) conditions.push("tone IN ('Serious', 'Emotional', 'Dark')");
   else if (avg.emotional_light > 0.1) conditions.push("tone IN ('Light', 'Quirky', 'Silly')");
+
+   // Emotional vs light keywords
+  if (avg.emotional_light < -0.1) addKeywordFilter(['heartbreak', 'tearjerker', 'tragedy', 'sacrifice']);
+  else if (avg.emotional_light > 0.1) addKeywordFilter(['rom-com', 'holiday', 'feel-good', 'friendship']);
 
   if (avg.action_dialogue < -0.1) conditions.push("genre IN ('Action', 'Adventure', 'War')");
   else if (avg.action_dialogue > 0.1) conditions.push("genre IN ('Drama', 'Romance')");
 
+  if (avg.action_dialogue < -0.1) addKeywordFilter(['battle', 'chase', 'fight', 'mission']);
+  else if (avg.action_dialogue > 0.1) addKeywordFilter(['dialogue', 'courtroom', 'conversation', 'debate']);
+
   if (avg.realistic_weird < -0.1) conditions.push("(story_type NOT IN ('Mind-bending', 'Cyberpunk', 'Fantasy') AND genre != 'Sci-Fi')");
   else if (avg.realistic_weird > 0.1) conditions.push("(story_type IN ('Mind-bending', 'Surreal') OR tone IN ('Quirky', 'Absurdism') OR genre IN ('Sci-Fi', 'Fantasy'))");
+
+  if (avg.realistic_weird < -0.1) addKeywordFilter(['true story', 'biopic', 'based on', 'historical']);
+  else if (avg.realistic_weird > 0.1) addKeywordFilter(['surreal', 'cosmic', 'dream', 'fantasy', 'alien']);
 
   if (avg.classic_modern < -0.1) conditions.push("year < 2000");
   else if (avg.classic_modern > 0.1) conditions.push("year >= 2000");
@@ -522,15 +550,28 @@ app.post('/api/recommendations', async (req, res) => {
   if (avg.safe_scary < -0.1) conditions.push("(genre NOT IN ('Horror', 'Thriller') AND sub_genre NOT IN ('Horror', 'Thriller') AND tone NOT IN ('Dark', 'Scary', 'Violent', 'Ominous'))");
   else if (avg.safe_scary > 0.1) conditions.push("(genre IN ('Horror', 'Thriller') OR sub_genre IN ('Horror', 'Thriller') OR tone IN ('Dark', 'Scary', 'Suspenseful'))");
 
+  if (avg.safe_scary < -0.1) addKeywordFilter(['feel-good', 'uplifting', 'family', 'warm']);
+  else if (avg.safe_scary > 0.1) addKeywordFilter(['ghost', 'killer', 'haunted', 'demon', 'slasher']);
+
   if (avg.slow_fast < -0.1) conditions.push("(genre IN ('Drama', 'Documentary', 'Romance') OR tone IN ('Slow', 'Quiet', 'Atmospheric'))");
   else if (avg.slow_fast > 0.1) conditions.push("(genre IN ('Action', 'Adventure', 'Thriller', 'Sci-Fi') OR tone IN ('Exciting', 'Intense', 'Fast-paced'))");
+
+  if (avg.slow_fast < -0.1) addKeywordFilter(['slow burn', 'contemplative', 'atmospheric']);
+  else if (avg.slow_fast > 0.1) addKeywordFilter(['high stakes', 'race against time', 'heist', 'explosion']);
 
   if (avg.indie_blockbuster < -0.1) conditions.push("(sub_genre IN ('Indie', 'Arthouse', 'Foreign') OR rating > 8.5)");
   else if (avg.indie_blockbuster > 0.1) conditions.push("(genre IN ('Action', 'Adventure', 'Sci-Fi', 'Fantasy') AND year >= 2000)");
 
+  if (avg.indie_blockbuster < -0.1) addKeywordFilter(['festival', 'arthouse', 'independent', 'minimalist']);
+  else if (avg.indie_blockbuster > 0.1) addKeywordFilter(['franchise', 'blockbuster', 'superhero', 'spectacle']);
+
   // Strict check for Animation to avoid mood mismatches
   if (avg.live_animated < -0.1) conditions.push("(genre != 'Animation' AND sub_genre != 'Animation')");
   else if (avg.live_animated > 0.1) conditions.push("(genre = 'Animation' OR sub_genre = 'Animation')");
+
+  // Hollywood vs Foreign: use origin_country and language as proxies for TMDB keywords
+  if (avg.hollywood_foreign < -0.1) conditions.push("(origin_country IN ('US','GB','CA','AU') OR original_language IN ('en'))");
+  else if (avg.hollywood_foreign > 0.1) conditions.push("(origin_country NOT IN ('US','GB','CA','AU') AND original_language NOT IN ('en'))");
 
   // Exclude seen movies
   if (seen_ids && Array.isArray(seen_ids) && seen_ids.length > 0) {
@@ -566,6 +607,9 @@ app.post('/api/recommendations', async (req, res) => {
         // Apply critical filters to fallback too
         if (avg.live_animated < 2) fallbackSql += " AND (genre != 'Animation' AND sub_genre != 'Animation')";
         else if (avg.live_animated > 3) fallbackSql += " AND (genre = 'Animation' OR sub_genre = 'Animation')";
+
+        if (avg.hollywood_foreign < -0.1) fallbackSql += " AND (origin_country IN ('US','GB','CA','AU') OR original_language IN ('en'))";
+        else if (avg.hollywood_foreign > 0.1) fallbackSql += " AND (origin_country NOT IN ('US','GB','CA','AU') AND original_language NOT IN ('en'))";
         
         fallbackSql += " ORDER BY rating DESC LIMIT 10";
         const [fallback] = await db.query(fallbackSql, fallbackParams);
