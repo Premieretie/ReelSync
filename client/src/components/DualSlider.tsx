@@ -1,44 +1,35 @@
 import React from 'react';
-import { Slider } from '@/components/ui/slider';
-import { motion } from 'framer-motion';
 
 interface DualSliderProps {
   leftLabel: string;
   rightLabel: string;
-  value: number;
+  value: number; // -5 (left) or 5 (right)
   onChange: (val: number) => void;
 }
 
 export const DualSlider: React.FC<DualSliderProps> = ({ leftLabel, rightLabel, value, onChange }) => {
+  const isRight = value > 0;
+
+  const toggle = () => {
+    onChange(isRight ? -5 : 5);
+  };
+
   return (
     <div className="w-full mb-8">
       <div className="flex justify-between mb-2 text-sm font-medium text-slate-300">
-        <span className={value < 0 ? 'text-white font-bold scale-110 transition-transform' : 'opacity-70 transition-opacity'}>{leftLabel}</span>
-        <span className={value === 0 ? 'text-xs text-slate-500 font-normal uppercase tracking-widest' : 'opacity-0'}>Neutral</span>
-        <span className={value > 0 ? 'text-white font-bold scale-110 transition-transform' : 'opacity-70 transition-opacity'}>{rightLabel}</span>
+        <span className={!isRight ? 'text-white font-bold' : 'opacity-70'}>{leftLabel}</span>
+        <span className={isRight ? 'text-white font-bold' : 'opacity-70'}>{rightLabel}</span>
       </div>
-      <Slider
-        defaultValue={[0]}
-        min={-5}
-        max={5}
-        step={1}
-        value={[value]}
-        onValueChange={(vals) => onChange(vals[0])}
-        className="cursor-pointer"
-      />
-      <div className="flex justify-between mt-1 text-xs text-slate-500 font-mono">
-        <span>5</span>
-        <span className="opacity-20">|</span>
-        <span className="opacity-20">|</span>
-        <span className="opacity-20">|</span>
-        <span className="opacity-20">|</span>
-        <span>0</span>
-        <span className="opacity-20">|</span>
-        <span className="opacity-20">|</span>
-        <span className="opacity-20">|</span>
-        <span className="opacity-20">|</span>
-        <span>5</span>
-      </div>
+      <button
+        type="button"
+        onClick={toggle}
+        className={`relative w-16 h-9 rounded-full transition-colors duration-200 flex items-center px-1 border border-slate-700 ${isRight ? 'bg-green-500/80' : 'bg-slate-700'}`}
+      >
+        <span
+          className={`absolute top-1 left-1 h-7 w-7 rounded-full bg-white shadow-lg transform transition-transform duration-200 ${isRight ? 'translate-x-7' : 'translate-x-0'}`}
+        />
+        <span className="sr-only">Toggle preference</span>
+      </button>
     </div>
   );
 };

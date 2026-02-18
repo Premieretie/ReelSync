@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getUsers, getRecommendations, getSharedList, getSessionById, updateSessionVisibility, finalizeSession, removeMovieFromList } from '@/lib/api';
+import { getUsers, getRecommendations, getSharedList, getSessionById, updateSessionVisibility, finalizeSession, removeMovieFromList, startRPSGame, getRPSStatus } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { MovieCard } from '@/components/MovieCard';
 import { RockPaperScissors } from '@/components/RockPaperScissors';
@@ -26,6 +26,7 @@ export const Results = () => {
 
   // RPS State
   const [showRPS, setShowRPS] = useState(false);
+  const [canDeleteHalf, setCanDeleteHalf] = useState(false);
 
   // Movie IQ & Spin State
   const [showMovieIQ, setShowMovieIQ] = useState(false);
@@ -52,6 +53,23 @@ export const Results = () => {
     }
   }, [sessionId]);
 
+  // If another user starts RPS, surface the prompt
+  useEffect(() => {
+      if (!sessionId || !participantId) return;
+      const interval = setInterval(async () => {
+          try {
+              const res = await getRPSStatus(Number(sessionId));
+              if (res.data?.active && !showRPS) {
+                  setShowRPS(true);
+                  setCanDeleteHalf(false);
+              }
+          } catch (e) {
+              console.error(e);
+          }
+      }, 3000);
+      return () => clearInterval(interval);
+  }, [sessionId, participantId, showRPS]);
+
   const loadSessionDetails = async () => {
       try {
           const res = await getSessionById(Number(sessionId));
@@ -59,6 +77,43 @@ export const Results = () => {
           setSessionCode(res.data.code);
       } catch (e) {
           console.error(e);
+      }
+  };
+
+  const handleStartRPS = async () => {
+      if (!participantId) return;
+      try {
+          await startRPSGame(Number(sessionId), participantId);
+          setShowRPS(true);
+          setCanDeleteHalf(false);
+      } catch (e) {
+          console.error(e);
+          alert("Couldn't start Rock Paper Scissors");
+      }
+  };
+
+  const handleRPSComplete = (winner: string | 'draw') => {
+      if (participantId && winner === participantId.toString()) {
+          setCanDeleteHalf(true);
+          alert("You won! You can delete half the shared list.");
+      }
+  };
+
+  const handleDeleteHalfList = async () => {
+      if (sharedList.length < 2) return alert("Need at least 2 movies to delete half.");
+      if (!confirm("Delete half of the shared list? This cannot be undone.")) return;
+      const halfCount = Math.floor(sharedList.length / 2);
+      const targets = sharedList.slice(0, halfCount);
+      try {
+          for (const item of targets) {
+              await removeMovieFromList(Number(sessionId), item.movie_id);
+          }
+          await loadSharedList();
+          setCanDeleteHalf(false);
+          alert("Half the list was removed.");
+      } catch(e) {
+          console.error(e);
+          alert("Failed to delete half the list");
       }
   };
 
@@ -394,6 +449,12 @@ export const Results = () => {
                                             <Dice5 size={18} className="mr-2"/> Spin Wheel
                                         </Button>
                                         <Button 
+                                            onClick={handleStartRPS}
+                                            className="bg-pink-600 hover:bg-pink-700 text-white"
+                                        >
+                                            Play RPS
+                                        </Button>
+                                        <Button 
                                             onClick={() => setShowMovieIQ(true)}
                                             className="bg-blue-600 hover:bg-blue-700 text-white"
                                         >
@@ -420,7 +481,7 @@ export const Results = () => {
                                 </h3>
                                 <p className="text-slate-300 mb-4">You have multiple matches. Settle it with a mini-game?</p>
                                 {!showRPS && (
-                                    <Button onClick={() => setShowRPS(true)} className="bg-pink-600 hover:bg-pink-700">
+                                    <Button onClick={handleStartRPS} className="bg-pink-600 hover:bg-pink-700">
                                         Play Rock Paper Scissors
                                     </Button>
                                 )}
@@ -431,7 +492,7 @@ export const Results = () => {
                             <RockPaperScissors 
                                 sessionId={Number(sessionId)} 
                                 userId={participantId} 
-                                onComplete={(winner) => console.log('RPS Winner:', winner)} 
+                                onComplete={handleRPSComplete} 
                             />
                         )}
                         
@@ -439,6 +500,18 @@ export const Results = () => {
                             <div className="bg-yellow-500/20 border border-yellow-500 text-yellow-200 p-4 rounded-xl text-center animate-pulse">
                                 <h3 className="font-bold">POWER UNLOCKED!</h3>
                                 <p>You can remove 1 movie from the list. Click the red X on a movie.</p>
+                            </div>
+                        )}
+
+                        {canDeleteHalf && (
+                            <div className="bg-pink-500/10 border border-pink-500 text-pink-100 p-4 rounded-xl text-center">
+                                <h3 className="font-bold">RPS Victory!</h3>
+                                <p>You won. Delete half the shared list?</p>
+                                <div className="mt-3 flex justify-center">
+                                    <Button onClick={handleDeleteHalfList} className="bg-pink-600 hover:bg-pink-700">
+                                        Delete Half
+                                    </Button>
+                                </div>
                             </div>
                         )}
 

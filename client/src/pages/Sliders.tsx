@@ -45,16 +45,16 @@ export const Sliders = () => {
   const [videosReady, setVideosReady] = useState(false);
 
   // Sliders State
-  const [brainyEasy, setBrainyEasy] = useState(0);
-  const [emotionalLight, setEmotionalLight] = useState(0);
-  const [actionDialogue, setActionDialogue] = useState(0);
-  const [realisticWeird, setRealisticWeird] = useState(0);
-  const [classicModern, setClassicModern] = useState(0);
+  const [brainyEasy, setBrainyEasy] = useState(-5);
+  const [emotionalLight, setEmotionalLight] = useState(-5);
+  const [actionDialogue, setActionDialogue] = useState(-5);
+  const [realisticWeird, setRealisticWeird] = useState(-5);
+  const [classicModern, setClassicModern] = useState(-5);
   // New Sliders
-  const [safeScary, setSafeScary] = useState(0);
-  const [slowFast, setSlowFast] = useState(0);
-  const [indieBlockbuster, setIndieBlockbuster] = useState(0);
-  const [liveAnimated, setLiveAnimated] = useState(0);
+  const [safeScary, setSafeScary] = useState(-5);
+  const [slowFast, setSlowFast] = useState(-5);
+  const [indieBlockbuster, setIndieBlockbuster] = useState(-5);
+  const [liveAnimated, setLiveAnimated] = useState(-5);
 
   useEffect(() => {
     // Start video reveal timer
@@ -194,23 +194,23 @@ export const Sliders = () => {
                     value={brainyEasy} onChange={setBrainyEasy} 
                 />
                 <DualSlider 
-                    leftLabel="Deep / Emotional" rightLabel="Light / Fun" 
+                    leftLabel="Heavy" rightLabel="Light Hearted" 
                     value={emotionalLight} onChange={setEmotionalLight} 
                 />
                 <DualSlider 
-                    leftLabel="Action / Intense" rightLabel="Dialogue / Slow" 
+                    leftLabel="More Action" rightLabel="More Dialogue" 
                     value={actionDialogue} onChange={setActionDialogue} 
                 />
                 <DualSlider 
-                    leftLabel="Realistic / Grounded" rightLabel="Weird / Sci-Fi" 
+                    leftLabel="Grounded" rightLabel="Weird" 
                     value={realisticWeird} onChange={setRealisticWeird} 
                 />
                 <DualSlider 
-                    leftLabel="Classic / Old School" rightLabel="Modern / Fresh" 
+                    leftLabel="Old School" rightLabel="Modern" 
                     value={classicModern} onChange={setClassicModern} 
                 />
                 <DualSlider 
-                    leftLabel="Safe / Comfort" rightLabel="Scary / Tense" 
+                    leftLabel="Safe / Comfort" rightLabel="Scary" 
                     value={safeScary} onChange={setSafeScary} 
                 />
                 <DualSlider 

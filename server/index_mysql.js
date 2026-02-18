@@ -785,11 +785,19 @@ app.post('/api/game/iq/:session_id/reset', (req, res) => {
     res.json({ success: true });
 });
 
+app.post('/api/game/rps/:session_id/start', (req, res) => {
+    const { session_id } = req.params;
+    const { user_id } = req.body;
+    rpsGames[session_id] = { moves: {}, result: null, active: true, started_by: user_id || null, started_at: Date.now() };
+    res.json({ success: true });
+});
+
 app.post('/api/game/rps/move', (req, res) => {
     const { session_id, user_id, move } = req.body; // move: 'rock', 'paper', 'scissors'
     
-    if (!rpsGames[session_id]) {
-        rpsGames[session_id] = { moves: {}, result: null };
+    // Require an active game
+    if (!rpsGames[session_id] || rpsGames[session_id].active === false) {
+        return res.status(400).json({ success: false, message: 'Game not started yet' });
     }
 
     rpsGames[session_id].moves[user_id] = move;
@@ -814,7 +822,8 @@ app.post('/api/game/rps/move', (req, res) => {
             winner = p2;
         }
 
-        rpsGames[session_id].result = { winner, moves: rpsGames[session_id].moves };
+        rpsGames[session_id].result = { winner, moves: rpsGames[session_id].moves, started_by: rpsGames[session_id].started_by };
+        rpsGames[session_id].active = false;
     }
 
     res.json({ success: true });
@@ -822,7 +831,7 @@ app.post('/api/game/rps/move', (req, res) => {
 
 app.get('/api/game/rps/:session_id', (req, res) => {
     const game = rpsGames[req.params.session_id];
-    res.json(game || { moves: {}, result: null });
+    res.json(game || { moves: {}, result: null, active: false, started_by: null });
 });
 
 app.post('/api/game/rps/:session_id/reset', (req, res) => {
