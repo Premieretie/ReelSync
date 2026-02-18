@@ -43,33 +43,33 @@ const getRandomModifiers = () => {
 
 const generateNightProfile = (avg) => {
   let adjectives = [];
-  if (avg.brainy_easy < 2) adjectives.push("Intellectual");
-  else if (avg.brainy_easy > 3) adjectives.push("Chill");
+  if (avg.brainy_easy < -0.1) adjectives.push("Intellectual");
+  else if (avg.brainy_easy > 0.1) adjectives.push("Chill");
   
-  if (avg.emotional_light < 2) adjectives.push("Deeply Emotional");
-  else if (avg.emotional_light > 3) adjectives.push("Lighthearted");
+  if (avg.emotional_light < -0.1) adjectives.push("Deeply Emotional");
+  else if (avg.emotional_light > 0.1) adjectives.push("Lighthearted");
 
-  if (avg.action_dialogue < 2) adjectives.push("Adrenaline-Fueled");
-  else if (avg.action_dialogue > 3) adjectives.push("Dialogue-Heavy");
+  if (avg.action_dialogue < -0.1) adjectives.push("Adrenaline-Fueled");
+  else if (avg.action_dialogue > 0.1) adjectives.push("Dialogue-Heavy");
 
-  if (avg.realistic_weird < 2) adjectives.push("Grounded");
-  else if (avg.realistic_weird > 3) adjectives.push("Wonderfully Weird");
+  if (avg.realistic_weird < -0.1) adjectives.push("Grounded");
+  else if (avg.realistic_weird > 0.1) adjectives.push("Wonderfully Weird");
 
-  if (avg.classic_modern < 2) adjectives.push("Vintage");
-  else if (avg.classic_modern > 3) adjectives.push("Modern");
+  if (avg.classic_modern < -0.1) adjectives.push("Vintage");
+  else if (avg.classic_modern > 0.1) adjectives.push("Modern");
 
   // New Sliders Profile Text
-  if (avg.safe_scary < 2) adjectives.push("Comforting");
-  else if (avg.safe_scary > 3) adjectives.push("Spooky");
+  if (avg.safe_scary < -0.1) adjectives.push("Comforting");
+  else if (avg.safe_scary > 0.1) adjectives.push("Spooky");
 
-  if (avg.slow_fast < 2) adjectives.push("Slow-Burn");
-  else if (avg.slow_fast > 3) adjectives.push("Fast-Paced");
+  if (avg.slow_fast < -0.1) adjectives.push("Slow-Burn");
+  else if (avg.slow_fast > 0.1) adjectives.push("Fast-Paced");
 
-  if (avg.indie_blockbuster < 2) adjectives.push("Artsy");
-  else if (avg.indie_blockbuster > 3) adjectives.push("Big-Budget");
+  if (avg.indie_blockbuster < -0.1) adjectives.push("Artsy");
+  else if (avg.indie_blockbuster > 0.1) adjectives.push("Big-Budget");
 
-  if (avg.live_animated < 2) adjectives.push("Live-Action");
-  else if (avg.live_animated > 3) adjectives.push("Animated");
+  if (avg.live_animated < -0.1) adjectives.push("Live-Action");
+  else if (avg.live_animated > 0.1) adjectives.push("Animated");
 
   if (adjectives.length === 0) return "A Perfectly Balanced Movie Night";
   
@@ -492,7 +492,7 @@ app.post('/api/recommendations', async (req, res) => {
   
   keys.forEach(k => {
     let sum = 0;
-    users.forEach(u => sum += (u.slider_values[k] || 2.5)); 
+    users.forEach(u => sum += (u.slider_values[k] || 0)); 
     avg[k] = sum / users.length;
   });
 
@@ -500,34 +500,37 @@ app.post('/api/recommendations', async (req, res) => {
   let conditions = [];
   let params = [];
   
-  if (avg.brainy_easy < 2) conditions.push("(genre IN ('Documentary', 'Drama', 'Sci-Fi') OR story_type = 'Mind-bending')");
-  else if (avg.brainy_easy > 3) conditions.push("(genre IN ('Comedy', 'Action', 'Adventure') OR tone IN ('Silly', 'Light'))");
+  // Thresholds: -5 to 5. Neutral is 0. 
+  // We use > 0.1 and < -0.1 to capture any deliberate choice (1 to 5) while ignoring 0.
+  
+  if (avg.brainy_easy < -0.1) conditions.push("(genre IN ('Documentary', 'Drama', 'Sci-Fi') OR story_type = 'Mind-bending')");
+  else if (avg.brainy_easy > 0.1) conditions.push("(genre IN ('Comedy', 'Action', 'Adventure') OR tone IN ('Silly', 'Light'))");
 
-  if (avg.emotional_light < 2) conditions.push("tone IN ('Serious', 'Emotional', 'Dark')");
-  else if (avg.emotional_light > 3) conditions.push("tone IN ('Light', 'Quirky', 'Silly')");
+  if (avg.emotional_light < -0.1) conditions.push("tone IN ('Serious', 'Emotional', 'Dark')");
+  else if (avg.emotional_light > 0.1) conditions.push("tone IN ('Light', 'Quirky', 'Silly')");
 
-  if (avg.action_dialogue < 2) conditions.push("genre IN ('Action', 'Adventure', 'War')");
-  else if (avg.action_dialogue > 3) conditions.push("genre IN ('Drama', 'Romance')");
+  if (avg.action_dialogue < -0.1) conditions.push("genre IN ('Action', 'Adventure', 'War')");
+  else if (avg.action_dialogue > 0.1) conditions.push("genre IN ('Drama', 'Romance')");
 
-  if (avg.realistic_weird < 2) conditions.push("(story_type NOT IN ('Mind-bending', 'Cyberpunk', 'Fantasy') AND genre != 'Sci-Fi')");
-  else if (avg.realistic_weird > 3) conditions.push("(story_type IN ('Mind-bending', 'Surreal') OR tone IN ('Quirky', 'Absurdism') OR genre IN ('Sci-Fi', 'Fantasy'))");
+  if (avg.realistic_weird < -0.1) conditions.push("(story_type NOT IN ('Mind-bending', 'Cyberpunk', 'Fantasy') AND genre != 'Sci-Fi')");
+  else if (avg.realistic_weird > 0.1) conditions.push("(story_type IN ('Mind-bending', 'Surreal') OR tone IN ('Quirky', 'Absurdism') OR genre IN ('Sci-Fi', 'Fantasy'))");
 
-  if (avg.classic_modern < 2) conditions.push("year < 2000");
-  else if (avg.classic_modern > 3) conditions.push("year >= 2000");
+  if (avg.classic_modern < -0.1) conditions.push("year < 2000");
+  else if (avg.classic_modern > 0.1) conditions.push("year >= 2000");
 
   // New Filters
-  if (avg.safe_scary < 2) conditions.push("(genre NOT IN ('Horror', 'Thriller') AND sub_genre NOT IN ('Horror', 'Thriller') AND tone NOT IN ('Dark', 'Scary', 'Violent', 'Ominous'))");
-  else if (avg.safe_scary > 3) conditions.push("(genre IN ('Horror', 'Thriller') OR sub_genre IN ('Horror', 'Thriller') OR tone IN ('Dark', 'Scary', 'Suspenseful'))");
+  if (avg.safe_scary < -0.1) conditions.push("(genre NOT IN ('Horror', 'Thriller') AND sub_genre NOT IN ('Horror', 'Thriller') AND tone NOT IN ('Dark', 'Scary', 'Violent', 'Ominous'))");
+  else if (avg.safe_scary > 0.1) conditions.push("(genre IN ('Horror', 'Thriller') OR sub_genre IN ('Horror', 'Thriller') OR tone IN ('Dark', 'Scary', 'Suspenseful'))");
 
-  if (avg.slow_fast < 2) conditions.push("(genre IN ('Drama', 'Documentary', 'Romance') OR tone IN ('Slow', 'Quiet', 'Atmospheric'))");
-  else if (avg.slow_fast > 3) conditions.push("(genre IN ('Action', 'Adventure', 'Thriller', 'Sci-Fi') OR tone IN ('Exciting', 'Intense', 'Fast-paced'))");
+  if (avg.slow_fast < -0.1) conditions.push("(genre IN ('Drama', 'Documentary', 'Romance') OR tone IN ('Slow', 'Quiet', 'Atmospheric'))");
+  else if (avg.slow_fast > 0.1) conditions.push("(genre IN ('Action', 'Adventure', 'Thriller', 'Sci-Fi') OR tone IN ('Exciting', 'Intense', 'Fast-paced'))");
 
-  if (avg.indie_blockbuster < 2) conditions.push("(sub_genre IN ('Indie', 'Arthouse', 'Foreign') OR rating > 8.5)");
-  else if (avg.indie_blockbuster > 3) conditions.push("(genre IN ('Action', 'Adventure', 'Sci-Fi', 'Fantasy') AND year >= 2000)");
+  if (avg.indie_blockbuster < -0.1) conditions.push("(sub_genre IN ('Indie', 'Arthouse', 'Foreign') OR rating > 8.5)");
+  else if (avg.indie_blockbuster > 0.1) conditions.push("(genre IN ('Action', 'Adventure', 'Sci-Fi', 'Fantasy') AND year >= 2000)");
 
   // Strict check for Animation to avoid mood mismatches
-  if (avg.live_animated < 2) conditions.push("(genre != 'Animation' AND sub_genre != 'Animation')");
-  else if (avg.live_animated > 3) conditions.push("(genre = 'Animation' OR sub_genre = 'Animation')");
+  if (avg.live_animated < -0.1) conditions.push("(genre != 'Animation' AND sub_genre != 'Animation')");
+  else if (avg.live_animated > 0.1) conditions.push("(genre = 'Animation' OR sub_genre = 'Animation')");
 
   // Exclude seen movies
   if (seen_ids && Array.isArray(seen_ids) && seen_ids.length > 0) {

@@ -45,16 +45,16 @@ export const Sliders = () => {
   const [videosReady, setVideosReady] = useState(false);
 
   // Sliders State
-  const [brainyEasy, setBrainyEasy] = useState(2.5);
-  const [emotionalLight, setEmotionalLight] = useState(2.5);
-  const [actionDialogue, setActionDialogue] = useState(2.5);
-  const [realisticWeird, setRealisticWeird] = useState(2.5);
-  const [classicModern, setClassicModern] = useState(2.5);
+  const [brainyEasy, setBrainyEasy] = useState(0);
+  const [emotionalLight, setEmotionalLight] = useState(0);
+  const [actionDialogue, setActionDialogue] = useState(0);
+  const [realisticWeird, setRealisticWeird] = useState(0);
+  const [classicModern, setClassicModern] = useState(0);
   // New Sliders
-  const [safeScary, setSafeScary] = useState(2.5);
-  const [slowFast, setSlowFast] = useState(2.5);
-  const [indieBlockbuster, setIndieBlockbuster] = useState(2.5);
-  const [liveAnimated, setLiveAnimated] = useState(2.5);
+  const [safeScary, setSafeScary] = useState(0);
+  const [slowFast, setSlowFast] = useState(0);
+  const [indieBlockbuster, setIndieBlockbuster] = useState(0);
+  const [liveAnimated, setLiveAnimated] = useState(0);
 
   useEffect(() => {
     // Start video reveal timer
