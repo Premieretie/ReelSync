@@ -55,6 +55,7 @@ export const Sliders = () => {
   const [slowFast, setSlowFast] = useState(-5);
   const [indieBlockbuster, setIndieBlockbuster] = useState(-5);
   const [liveAnimated, setLiveAnimated] = useState(-5);
+  const [hollywoodForeign, setHollywoodForeign] = useState(-5);
 
   useEffect(() => {
     // Start video reveal timer
@@ -105,7 +106,8 @@ export const Sliders = () => {
         safe_scary: safeScary,
         slow_fast: slowFast,
         indie_blockbuster: indieBlockbuster,
-        live_animated: liveAnimated
+        live_animated: liveAnimated,
+        hollywood_foreign: hollywoodForeign
     };
 
     try {
@@ -218,12 +220,16 @@ export const Sliders = () => {
                     value={slowFast} onChange={setSlowFast} 
                 />
                 <DualSlider 
-                    leftLabel="Indie / Artsy" rightLabel="Blockbuster" 
+                    leftLabel="Indie" rightLabel="Blockbuster" 
                     value={indieBlockbuster} onChange={setIndieBlockbuster} 
                 />
                 <DualSlider 
                     leftLabel="Live Action" rightLabel="Animated" 
                     value={liveAnimated} onChange={setLiveAnimated} 
+                />
+                <DualSlider 
+                    leftLabel="Hollywood" rightLabel="Foreign" 
+                    value={hollywoodForeign} onChange={setHollywoodForeign} 
                 />
             </div>
 
