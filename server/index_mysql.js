@@ -149,7 +149,7 @@ app.post('/api/admin/seed-tmdb', async (req, res) => {
                 }
 
                 // Fetch details for Director, Videos, and Metadata
-                const detailsRes = await axios.get(`${TMDB_BASE_URL}/movie/${item.id}?append_to_response=credits,videos`, getTMDBHeaders());
+                const detailsRes = await axios.get(`${TMDB_BASE_URL}/movie/${item.id}?append_to_response=credits,videos,keywords`, getTMDBHeaders());
                 const details = detailsRes.data;
 
                 const director = details.credits.crew.find(c => c.job === 'Director')?.name || 'Unknown';
@@ -161,6 +161,7 @@ app.post('/api/admin/seed-tmdb', async (req, res) => {
                 const original_language = details.original_language || 'en';
                 const origin_country = details.production_countries?.[0]?.iso_3166_1 || (details.origin_country?.[0]) || 'Unknown';
                 const cast = details.credits.cast?.slice(0, 5).map(c => c.name) || [];
+                const keywords = details.keywords?.keywords?.map(k => k.name) || [];
 
                 const genre = mapGenreIdToName(item.genre_ids[0]);
                 const sub_genre = item.genre_ids[1] ? mapGenreIdToName(item.genre_ids[1]) : 'General';
@@ -172,17 +173,17 @@ app.post('/api/admin/seed-tmdb', async (req, res) => {
                     // Update existing record with new metadata
                     await db.query(
                         `UPDATE movies SET 
-                        overview = ?, runtime = ?, original_language = ?, origin_country = ?, cast = ?, youtube_key = COALESCE(youtube_key, ?)
+                        overview = ?, runtime = ?, original_language = ?, origin_country = ?, cast = ?, keywords = ?, youtube_key = COALESCE(youtube_key, ?)
                         WHERE id = ?`,
-                        [overview, runtime, original_language, origin_country, JSON.stringify(cast), trailer, existing[0].id]
+                        [overview, runtime, original_language, origin_country, JSON.stringify(cast), JSON.stringify(keywords), trailer, existing[0].id]
                     );
                     // console.log(`Updated metadata for: ${item.title}`);
                 } else {
                     // Insert new record
                     await db.query(
                         `INSERT INTO movies 
-                        (movie_title, year, genre, sub_genre, story_type, tone, main_theme, setting_location, director, rating, poster_path, youtube_key, overview, runtime, original_language, origin_country, cast) 
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                        (movie_title, year, genre, sub_genre, story_type, tone, main_theme, setting_location, director, rating, keywords, poster_path, youtube_key, overview, runtime, original_language, origin_country, cast) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                         [
                             item.title,
                             year,
@@ -194,6 +195,7 @@ app.post('/api/admin/seed-tmdb', async (req, res) => {
                             'Unknown',       // Default setting
                             director,
                             item.vote_average,
+                            JSON.stringify(keywords),
                             item.poster_path,
                             trailer,
                             overview,
@@ -484,17 +486,18 @@ app.post('/api/recommendations', async (req, res) => {
   const { users, seen_ids } = req.body;
   if (!users || users.length === 0) return res.status(400).json({ error: "No users provided" });
 
-  // Utility: add keyword-based LIKE matches on overview for mood reinforcement
+  // Utility: add keyword-based LIKE matches across overview and stored keywords for mood reinforcement
   const addKeywordFilter = (keywords, negate = false) => {
       if (!Array.isArray(keywords) || keywords.length === 0) return;
-      const likeClauses = keywords.map(() => `LOWER(overview) LIKE ?`);
+      const likeClauses = keywords.map(() => `(LOWER(overview) LIKE ? OR LOWER(keywords) LIKE ?)`);
       const clause = `(${likeClauses.join(' OR ')})`;
+      const likeValues = keywords.flatMap(k => [`%${k.toLowerCase()}%`, `%${k.toLowerCase()}%`]);
       if (negate) {
           conditions.push(`NOT ${clause}`);
-          params.push(...keywords.map(k => `%${k.toLowerCase()}%`));
+          params.push(...likeValues);
       } else {
           conditions.push(clause);
-          params.push(...keywords.map(k => `%${k.toLowerCase()}%`));
+          params.push(...likeValues);
       }
   };
 
@@ -529,7 +532,7 @@ app.post('/api/recommendations', async (req, res) => {
 
    // Emotional vs light keywords
   if (avg.emotional_light < -0.1) addKeywordFilter(['heartbreak', 'tearjerker', 'tragedy', 'sacrifice']);
-  else if (avg.emotional_light > 0.1) addKeywordFilter(['rom-com', 'holiday', 'feel-good', 'friendship']);
+  else if (avg.emotional_light > 0.1) addKeywordFilter(['rom-com', 'holiday', 'feel-good', 'friendship', 'love story']);
 
   if (avg.action_dialogue < -0.1) conditions.push("genre IN ('Action', 'Adventure', 'War')");
   else if (avg.action_dialogue > 0.1) conditions.push("genre IN ('Drama', 'Romance')");

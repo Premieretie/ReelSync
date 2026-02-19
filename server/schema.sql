@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS movies (
   setting_location VARCHAR(100),
   director VARCHAR(100),
   rating DECIMAL(3, 1),
+  keywords TEXT,
   poster_path VARCHAR(255),
   youtube_key VARCHAR(50)
 );

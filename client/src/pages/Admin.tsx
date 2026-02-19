@@ -10,13 +10,14 @@ export const Admin = () => {
     const [error, setError] = useState<string | null>(null);
     const [pages, setPages] = useState(5);
 
-    const handleSeed = async (type: 'popular' | 'top_rated') => {
+    const handleSeed = async (type: 'popular' | 'top_rated', overridePages?: number) => {
         setLoading(true);
-        setStatus(`Fetching ${pages} pages of ${type} movies...`);
+        const targetPages = overridePages ?? pages;
+        setStatus(`Fetching ${targetPages} pages of ${type} movies...`);
         setError(null);
         
         try {
-            await seedTMDB(pages, type);
+            await seedTMDB(targetPages, type);
             setStatus('Success! Database populated with new movies.');
         } catch (e: any) {
             console.error(e);
@@ -88,6 +89,13 @@ export const Admin = () => {
                             className="flex-1 bg-green-600 hover:bg-green-700"
                         >
                             <Download size={18} className="mr-2" /> Import Top Rated
+                        </Button>
+                        <Button 
+                            onClick={() => handleSeed('popular', 50)} 
+                            disabled={loading}
+                            className="flex-1 bg-purple-600 hover:bg-purple-700"
+                        >
+                            <Download size={18} className="mr-2" /> Import 50 Popular
                         </Button>
                     </div>
 

@@ -179,7 +179,7 @@ export const Sliders = () => {
       <div className="flex w-full max-w-[1600px] gap-8 items-center">
         
         {/* Left Panel */}
-        <div className="hidden xl:block flex-1 bg-slate-700/30 rounded-3xl border border-slate-800/50 p-4 h-[65vh] overflow-hidden">
+        <div className="hidden xl:block flex-1 bg-slate-700/30 rounded-3xl border border-slate-800/50 p-4 h-[98vh] overflow-hidden">
             <TrailerGrid movies={leftTrailers} show={videosReady} />
         </div>
 
@@ -190,7 +190,7 @@ export const Sliders = () => {
                 <p className="text-slate-400 text-sm">Adjust sliders to match your vibe tonight.</p>
             </div>
 
-            <div className="space-y-6 bg-slate-900/80 backdrop-blur-sm p-6 rounded-2xl border border-slate-800 shadow-2xl">
+            <div className="space-y-6 bg-slate-900/80 backdrop-blur-sm p-6 rounded-2xl border border-slate-800 shadow-2xl text-center">
                 <DualSlider 
                     leftLabel="Brainy" rightLabel="Easy Watching" 
                     value={brainyEasy} onChange={setBrainyEasy} 
@@ -212,7 +212,7 @@ export const Sliders = () => {
                     value={classicModern} onChange={setClassicModern} 
                 />
                 <DualSlider 
-                    leftLabel="Safe / Comfort" rightLabel="Scary" 
+                    leftLabel="Comfort" rightLabel="Scary" 
                     value={safeScary} onChange={setSafeScary} 
                 />
                 <DualSlider 
@@ -250,7 +250,7 @@ export const Sliders = () => {
         </div>
 
         {/* Right Panel */}
-        <div className="hidden xl:block flex-1 bg-slate-700/30 rounded-3xl border border-slate-800/50 p-4 h-[65vh] overflow-hidden">
+        <div className="hidden xl:block flex-1 bg-slate-700/30 rounded-3xl border border-slate-800/50 p-4 h-[98vh] overflow-hidden">
             <TrailerGrid movies={rightTrailers} show={videosReady} />
         </div>
 
